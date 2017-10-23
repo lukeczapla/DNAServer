@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google-signin-scope" content="email">
+    <meta name="google-signin-client_id" content="613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com">
+    <title>DNA Analysis and Simulation Server</title>
+    <link rel="stylesheet" href="stylesheets/stylesheet.css">
+    <link rel="shortcut icon" type="image/x-icon" href="dna.ico">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js" async defer></script>
+    <script src="//apis.google.com/js/platform.js"></script>
+    <script src="js/3Dmol.min.js"></script>
+    <script src="js/xml2json.min.js"></script>
+    <script src="js/Chart.bundle.min.js"></script>
+    <script src="js/plotly-latest.min.js"></script>
+    <script src="js/numeric-1.2.6.min.js"></script>
+    <script src="js/setup.js"></script>
+    <script src="js/filesaver.js"></script>
+    <script src="js/login.js"></script>
+    <script src="js/fixed.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/structures.js"></script>
+    <script src="js/references.js"></script>
+    <script src="js/scoring.js"></script>
+    <script src="js/proteins.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/rcsb.js"></script>
+    <script src="js/tetramer.js"></script>
+</head>
+<body>
+
+<header>
+    <div id="unauthed">
+        <div class="g-signin2" data-onsuccess="onSignIn" data-theme="light"></div>
+    </div>
+    <div id="authed" hidden>
+        <div id="imgbox"></div><a href="#" onclick="signout()">Sign out</a>
+    </div>
+    <input type="button" onclick="refreshData()" value="Refresh Data">
+    <input type="button" onclick="publicationMode()" value="Publication Mode">
+    <input type="button" onclick="viewMode()" value="Browser Mode">
+    <input type="button" id="stopbutton" onclick="stopSim()" hidden value="Stop simulation">
+    <h1>DNA Simulation and Analysis Workbench</h1>
+</header>
+<main>
+
+    <input class="dmenu" id="tab1" type="radio" name="tabs" checked>
+    <label for="tab1">Step Parameters</label>
+
+    <input class="dmenu" id="tab2" type="radio" name="tabs">
+    <label for="tab2">Input Sequence</label>
+
+    <input class="dmenu" id="tab3" type="radio" name="tabs">
+    <label for="tab3">Proteins</label>
+
+    <input class="dmenu" id="tab4" type="radio" name="tabs">
+    <label for="tab4">Simulation Setup & Run</label>
+
+    <input class="dmenu" id="tab5" type="radio" name="tabs">
+    <label for="tab5">Analysis</label>
+
+    <input class="dmenu" id="tab6" type="radio" name="tabs">
+    <label for="tab6">Visualization</label>
+
+    <input class="dmenu" id="tab7" type="radio" name="tabs">
+    <label for="tab7">PDB Analysis</label>
+
+    <input class="dmenu" id="tab8" type="radio" name="tabs">
+    <label for="tab8">Run & Visualize MMC</label>
+
+    <input class="dmenu" id="tab9" type="radio" name="tabs">
+    <label for="tab9">Scoring & Misc.</label>
+
+    <input class="dmenu" id="tab10" type="radio" name="tabs">
+    <label for="tab10">RCSB Force Field Analysis</label>
+
+    <section id="content1">
+        <select onchange="saveAndLoad()" id="bpselect" name="steps">
+            <option value=0>CG step</option>
+            <option value=1>CA step</option>
+            <option value=2>TA step</option>
+            <option value=3>AG step</option>
+            <option value=4>GG step</option>
+            <option value=5>AA step</option>
+            <option value=6>GA step</option>
+            <option value=7>AT step</option>
+            <option value=8>AC step</option>
+            <option value=9>GC step</option>
+            <option value=10>ZZ step (extra)</option>
+            <option value=11>ZA step (extra)</option>
+            <option value=12>ZT step (extra)</option>
+            <option value=13>ZG step (extra)</option>
+            <option value=14>ZC step (extra)</option>
+            <option value=15>AZ step (extra)</option>
+            <option value=16>TZ step (extra)</option>
+            <option value=17>GZ step (extra)</option>
+            <option value=18>CZ step (extra)</option>
+        </select>
+        <input type="button" id="rnaon" onclick="RNAmode();" value="Turn on RNA mode">
+        <input type="button" id="rnaoff" onclick="RNAmodeOff();" value="Turn off RNA mode" hidden>
+        <input type="button" id="rnaon" onclick="tetramerOn();" value="Turn on tetramer mode">
+        <input type="button" id="rnaoff" onclick="tetramerOff();" value="Turn off tetramer mode" hidden>
+
+        <p/>
+        <h4>Equilibrium Step States</h4>
+        <table>
+            <tr>
+                <td>tilt<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp0"></td>
+            </tr>
+            <tr>
+                <td>roll<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp1"></td>
+            </tr>
+            <tr>
+                <td>twist<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp2"></td>
+            </tr>
+            <tr>
+                <td>shift<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp3"></td>
+            </tr>
+            <tr>
+                <td>slide<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp4"></td>
+            </tr>
+            <tr>
+                <td>rise<sub>0</sub></td>
+                <td><input type="number" step="any" id="tp5"></td>
+            </tr>
+        </table>
+        <p/>
+        <h4>Elasticity Constants</h4>
+        <table>
+            <tr>
+                <td></td>
+                <td>Tilt</td>
+                <td>Roll</td>
+                <td>Twist</td>
+                <td>Shift</td>
+                <td>Slide</td>
+                <td>Rise</td>
+            </tr>
+            <tr>
+                <td>Tilt</td>
+                <td><input type="number" step="any" id="M00"></td>
+                <td><input type="number" step="any" id="M01"></td>
+                <td><input type="number" step="any" id="M02"></td>
+                <td><input type="number" step="any" id="M03"></td>
+                <td><input type="number" step="any" id="M04"></td>
+                <td><input type="number" step="any" id="M05"></td>
+            </tr>
+            <tr>
+                <td>Roll</td>
+                <td></td>
+                <td><input type="number" step="any" id="M11"></td>
+                <td><input type="number" step="any" id="M12"></td>
+                <td><input type="number" step="any" id="M13"></td>
+                <td><input type="number" step="any" id="M14"></td>
+                <td><input type="number" step="any" id="M15"></td>
+            </tr>
+            <tr>
+                <td>Twist</td>
+                <td></td>
+                <td></td>
+                <td><input type="number" step="any" id="M22"></td>
+                <td><input type="number" step="any" id="M23"></td>
+                <td><input type="number" step="any" id="M24"></td>
+                <td><input type="number" step="any" id="M25"></td>
+            </tr>
+            <tr>
+                <td>Shift</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><input type="number" step="any" id="M33"></td>
+                <td><input type="number" step="any" id="M34"></td>
+                <td><input type="number" step="any" id="M35"></td>
+            </tr>
+            <tr>
+                <td>Slide</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><input type="number" step="any" id="M44"></td>
+                <td><input type="number" step="any" id="M45"></td>
+            </tr>
+            <tr>
+                <td>Rise</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><input type="number" step="any" id="M55"></td>
+            </tr>
+        </table>
+        <input type='button' value='Save Parameters' onclick="saveFile()"> <input type="checkbox" id="exportscaled"> Export with scaled Force Constants
+
+        <br/>
+        <input type='file' id='fileinput'>
+        <input type='button' id='btnLoad' value='Load Parameters' onclick="loadFile()">
+
+        <table><tr>
+            <td>Force Constant Scaling factor: </td>
+            <td><input id="sfactor" type="number" step="any" value=1.0></td>
+        </tr></table>
+        <br/><br/>
+        <input type="button" onclick="showEigen()" value="Show Eigenvectors and eigenvalues">
+        <h4>Eigenvector Table</h4>
+        <table>
+            <tr>
+                <td></td>
+                <td>Mode 1</td>
+                <td>Mode 2</td>
+                <td>Mode 3</td>
+                <td>Mode 4</td>
+                <td>Mode 5</td>
+                <td>Mode 6</td>
+            </tr>
+            <tr>
+                <td>Tilt</td>
+                <td id="E00"></td>
+                <td id="E01"></td>
+                <td id="E02"></td>
+                <td id="E03"></td>
+                <td id="E04"></td>
+                <td id="E05"></td>
+            </tr>
+            <tr>
+                <td>Roll</td>
+                <td id="E10"></td>
+                <td id="E11"></td>
+                <td id="E12"></td>
+                <td id="E13"></td>
+                <td id="E14"></td>
+                <td id="E15"></td>
+            </tr>
+            <tr>
+                <td>Twist</td>
+                <td id="E20"></td>
+                <td id="E21"></td>
+                <td id="E22"></td>
+                <td id="E23"></td>
+                <td id="E24"></td>
+                <td id="E25"></td>
+            </tr>
+            <tr>
+                <td>Shift</td>
+                <td id="E30"></td>
+                <td id="E31"></td>
+                <td id="E32"></td>
+                <td id="E33"></td>
+                <td id="E34"></td>
+                <td id="E35"></td>
+            </tr>
+            <tr>
+                <td>Slide</td>
+                <td id="E40"></td>
+                <td id="E41"></td>
+                <td id="E42"></td>
+                <td id="E43"></td>
+                <td id="E44"></td>
+                <td id="E45"></td>
+            </tr>
+            <tr>
+                <td>Rise</td>
+                <td id="E50"></td>
+                <td id="E51"></td>
+                <td id="E52"></td>
+                <td id="E53"></td>
+                <td id="E54"></td>
+                <td id="E55"></td>
+            </tr>
+            <tr>
+                <td><b>value</b></td>
+                <td id="EV0"></td>
+                <td id="EV1"></td>
+                <td id="EV2"></td>
+                <td id="EV3"></td>
+                <td id="EV4"></td>
+                <td id="EV5"></td>
+            </tr>
+        </table>
+
+
+
+    </section>
+
+    <section id="content2">
+        <h4>Nucleic Acid Sequence:</h4>
+        <textarea placeholder="enter sequence (e.g. ATTGGCAT)" rows="20" cols="80" id="sequence" onkeyup="validateSeq(this)"></textarea>
+        <p>
+            or generate generic DNA with <input id="nsd" type="number"> base-pair steps <input type="button" value="Generate Generic" onclick="generate()">  <input type="button" value="Generate Random Sequence" onclick="generateRandom()">
+        </p>
+        <p>
+            <input type="button" onclick="calculatePersistenceLength(useRNA)" value="Calculate Persistence Length"> <input type="button" onclick="drawEquilibrium()" value="Draw minimum energy configuration">
+        </p>
+        <br/><br/>
+        <div id="plength"></div>
+
+        <div id="glmolbox2" class="mol-container"></div>
+    </section>
+
+
+    <section id="content3">
+
+        <h4><input id="tabp1" type="radio" name="proteintabs" onclick="unselectFixed()" checked> Select non-specific protein to include in simulation (or run free DNA)</h4>
+        <table>
+        <tr><td><select id="proteins">
+            <option value=-1>no proteins</option>
+        </select></td><td>Binding Probability: </td><td><input type="number" id="bindingP" step="any" value=0.01></td>
+        </tr>
+        </table>
+        <br/>
+        <h4><input id="tabp2" type="radio" name="proteintabs" onclick="selectFixed()"> Fix proteins at specific sites</h4>
+        <table id="fixedProteinTable">
+            <tr>
+                <td>Select protein: </td>
+                <td><select id="fixed0"></td>
+                <td>placed at (position of first bp, starting with 1): <input id="fixedpos0" type="number"></td>
+            </tr>
+        </table>
+        <input type="button" value="Add more" onclick="addMoreFixedProteins()"> <input type="button" value="Delete last" onclick="deleteLastFixedProtein()">
+        Fix spacing between proteins to <input type="number" id="fsp"> <input type="button" value="Replace positions" onclick="evenlySpaced(parseInt($('#fsp').val()))">
+        <p/>
+        <br/><br/><br/><br/>
+        <h4>ADD NEW PROTEIN</h4>
+        Add New Protein named <input type="text" id="nameP">
+        <br/>
+        Number of copies <input type="number" id="nP" value=1>
+        Number of base-pair steps <input type="number" id="stepsP"><p/>
+        Base-Pair Step Data<br/>
+        <textarea rows="20" cols="80" id="stepData"></textarea><p/>
+        Protein PDB files (separated by END)<br/>
+        <textarea rows="20" cols="80" id="proteinPDB"></textarea>
+        <br/><input type="button" value="Submit New Protein to Database" onclick="addProtein()">
+        <br/>
+        <br/>
+        <h4>PROTEIN EDITOR</h4>
+        <select id="proteins3" multiple></select>
+        <input type="button" value="Rename selected protein" onclick="renameProtein()"> to <input type="text" id="newproteinname">
+        <br/><input type="button" value="Delete selected proteins" onclick="deleteProteins()">
+    </section>
+
+    <section id="content4">
+        <table>
+            <tr>
+                <td><h4>Description of calculation</h4></td>
+                <td><input type="text" id="jobdescription"></td>
+            </tr>
+            <tr>
+                <td><h4>Number of half chains</h4></td>
+                <td><input type="number" value="100000" id="nChains"></td>
+            </tr>
+            <tr>
+                <td><h4>Radial bound (r < value in Å)</h4></td>
+                <td><input type="number" value="20" step="any" id="rBounds"></td>
+            </tr>
+            <tr>
+                <td><h4>Normal bound (cos(gamma) > value)</h4></td>
+                <td><input type="number" value="0.867" step="any" id="gBounds"></td>
+            </tr>
+            <tr>
+                <td><h4>Twist bound (|twist| < value in degrees)  </h4></td>
+                <td><input type="number" value="30.0" step="any" id="twBounds"></td>
+            </tr>
+            <tr>
+                <td>Check to turn off generating images</td>
+                <td><input type="checkbox" id="suppressImages"></td>
+            </tr>
+            <tr>
+                <td>Big DNA grid optimization (for >1500 bp)</td>
+                <td><input type="checkbox" id="useLargeBins"></td>
+            </tr>
+            <tr>
+                <td><h4>Use Custom boundaries (below)</h4></td>
+                <td><input type="checkbox" id="useBounds"></td>
+            </tr>
+
+        </table>
+        <br/><br/>
+        <h4>Specify non-circular boundary conditions (check each box used)</h4>
+        <table
+            <tr>
+                <td>Boundary 0</td>
+                <td><select id="custom0"><option value=-1>Custom</option></select></td>
+                <td><input type="checkbox" id="b0"></td>
+            </tr>
+            <tr>
+                <td>Tilt <input type="number" step="any" id="b00"></td>
+                <td>Roll <input type="number" step="any" id="b01"></td>
+                <td>Twist <input type="number" step="any" id="b02"></td>
+                <td>Shift <input type="number" step="any" id="b03"></td>
+                <td>Slide <input type="number" step="any" id="b04"></td>
+                <td>Rise <input type="number" step="any" id="b05"></td>
+            </tr>
+            <tr>
+                <td>Boundary 1</td>
+                <td><select id="custom1"><option value=-1>Custom</option></select></td>
+                <td><input type="checkbox" id="b1"></td>
+            </tr>
+            <tr>
+                <td>Tilt <input type="number" step="any" id="b10"></td>
+                <td>Roll <input type="number" step="any" id="b11"></td>
+                <td>Twist <input type="number" step="any" id="b12"></td>
+                <td>Shift <input type="number" step="any" id="b13"></td>
+                <td>Slide <input type="number" step="any" id="b14"></td>
+                <td>Rise <input type="number" step="any" id="b15"></td>
+            </tr>
+            <tr>
+                <td>Boundary 2</td>
+                <td><select id="custom2"><option value=-1>Custom</option></select></td>
+                <td><input type="checkbox" id="b2"></td>
+            </tr>
+            <tr>
+                <td>Tilt <input type="number" step="any" id="b20"></td>
+                <td>Roll <input type="number" step="any" id="b21"></td>
+                <td>Twist <input type="number" step="any" id="b22"></td>
+                <td>Shift <input type="number" step="any" id="b23"></td>
+                <td>Slide <input type="number" step="any" id="b24"></td>
+                <td>Rise <input type="number" step="any" id="b25"></td>
+            </tr>
+            <tr>
+                <td>Boundary 3</td>
+                <td><select id="custom3"><option value=-1>Custom</option></select></td>
+                <td><input type="checkbox" id="b3"></td>
+            </tr>
+            <tr>
+                <td>Tilt <input type="number" step="any" id="b30"></td>
+                <td>Roll <input type="number" step="any" id="b31"></td>
+                <td>Twist <input type="number" step="any" id="b32"></td>
+                <td>Shift <input type="number" step="any" id="b33"></td>
+                <td>Slide <input type="number" step="any" id="b34"></td>
+                <td>Rise <input type="number" step="any" id="b35"></td>
+            </tr>
+        </table>
+        <p/>
+        <br/>
+        <input type="submit" onclick="submitJob()">
+        <p/>
+        <div id="jobmessage" style="color:Red"></div>
+
+    </section>
+    <section id="content5">
+        <input type="checkbox" id="showparams"> Show the job parameters
+        <p>
+            <select id="myjobs" multiple>
+
+            </select>
+            <br/>Choose bound: <input type="number" id="boundid" value=0>
+            <br/>
+            <input type="button" onclick="deleteJobs()" value="Delete Selected Jobs">
+            <input type="button" onclick="analyze()" value="Analyze Selected Job">
+            <input type="button" onclick="downloadJob()" value="Download job data">
+            <br/><br/>
+            Analyze external job: <input type="text" id="exttoken"> code: <input type="text" id="extcode">
+            <input type="button" onclick="analyzeExternal()" value="Get external job">
+            <br/><br/>
+        <div id="sparameter"></div>
+        <p>
+        <div id="jfactors"></div>
+        <p>
+            <br/>
+            <canvas id="MyChart0"></canvas>
+            <br/>
+            <canvas id="MyChart1"></canvas>
+            <br/>
+            <canvas id="MyChart2"></canvas>
+            <br/>
+            <canvas id="MyChart3"></canvas>
+            <br/>
+            <canvas id="MyChart4"></canvas>
+            <br/>
+            <canvas id="MyChart5"></canvas>
+            <br/>
+            <canvas id="MyChart6"></canvas>
+            <div id="mypositiondiv"></div>
+            <br/>
+            <div id="mydistancediv"></div>
+    </section>
+    <section id="content6">
+        <select id="myjobs2">
+        </select> or <input type="checkbox" id="extvis"> shared with token <input type="text" id="exttoken2"> and code <input type="text" id="extcode2">
+        <p>
+            <input type="button" value="List all structures" onclick="getStructures()">
+        </p>
+        <p>
+            Structure number <input id="snumber" type="number" value=1>  Boundary number <input id="sbound" type="number" value=0> <input type="button" value="Draw it!" onclick="getSteps()">
+        </p>
+        <p>
+            <select id="extraImages" multiple>
+                <option value="pdb/LacA.pdb">Lac Version 1</option>
+                <option value="pdb/LacB.pdb">Lac Version 2</option>
+                <option value="pdb/galA.pdb">Gal Version 1</option>
+                <option value="pdb/galB.pdb">Gal Version 2</option>
+                <option value="pdb/lambda1.pdb">Lambda Version 1</option>
+                <option value="pdb/lambda2.pdb">Lambda Version 2</option>
+            </select>
+        </p>
+        <p>
+        <div id="glmolbox" class="mol-container"></div>
+        <textarea id="glmolbox_src" hidden></textarea>
+        </p>
+        <input type="button" onclick="saveStructure()" value="Save Currently Loaded PDB">
+        <p><input type="button" onclick="saveSteps()" value="Save Currently Loaded Step Parameters"></p>
+        <div id="structuredata"></div>
+    </section>
+    <section id="content7">
+        <h4>Import PDB file from RCSB (4 letter code) </h4><input type="text" maxlength=4 id="pdbfileid"><input type="button" onclick="retrievePDB($('#pdbfileid').val());" value="Import!">
+        <h4>Analyze a protein-DNA structure</h4>
+        <textarea placeholder="Paste the text of a PDB file in this window" rows="20" cols="80" id="pdbref"></textarea>
+        <p/>
+        <input type="button" onclick="getReferenceFrames()" value="Analyze it!">
+        <br/>
+        <h4>Base Pair Reference Frames</h4>
+        <select id="steprefs" class="refList" multiple>
+        </select>
+        <input type="button" onclick="selectAllBP()" value="Select all base pairs"> <input type="button" onclick="unselectAllBP()" value="Unselect all base pairs">
+        <table>
+            <tr>
+                <td>Reverse Step 1</td>
+                <td><input type="checkbox" id="reverse1"></td>
+            </tr>
+            <tr>
+                <td>Reverse Step 2</td>
+                <td><input type="checkbox" id="reverse2"></td>
+            </tr>
+            <tr>
+                <td><input type="button" onclick="generateBC()" value="Generate Boundary"></td>
+            </tr>
+        </table>
+        <p><br/><br/>
+        <h4>Add boundary condition to the database</h4>
+        <table>
+            <tr>
+                <td>Name of BC</td>
+                <td><input type="text" id="bcname"></td>
+            </tr>
+            <tr>
+                <td>Tilt</td><td>Roll</td><td>Twist</td><td>Shift</td><td>Slide</td><td>Rise</td>
+            </tr>
+            <tr>
+                <td><input type="number" step="any" id="bctilt"></td>
+                <td><input type="number" step="any" id="bcroll"></td>
+                <td><input type="number" step="any" id="bctwist"></td>
+                <td><input type="number" step="any" id="bcshift"></td>
+                <td><input type="number" step="any" id="bcslide"></td>
+                <td><input type="number" step="any" id="bcrise"></td>
+            </tr>
+
+            <tr>
+                <td><input type="button" value="Add to database" onclick="addBC()"></td>
+            </tr>
+        </table>
+        <p>
+            <br/>
+            <br/>
+        <h4>Translate PDB structure about selected base-pair</h4>
+        <table>
+            <tr><td><input type="checkbox" value="Reverse the bp orientation" id="reverseshift"> Reverse base-pair orientation</td></tr>
+            <tr>
+                <td><input type="button" onclick="doTranslate()" value="Translate me (Download PDB)"></td>
+                <td><input type="button" onclick="doTranslate('nosave')" value="Show step parameter input"></td>
+            </tr>
+            <tr><td>Commit translated structure to database for illustration with name <input type="text" id="structurename"></td></tr>
+            <tr><td>Description <input type="text" id="structuredesc"></td>
+                <td><input type="button" value="Add to Database" onclick="addStructure()"</td>
+            </tr>
+        </table>
+        <div id="stepparameterview"></div>
+    </section>
+    <section id="content8">
+        <canvas id="MyChart10"></canvas><br/>
+        Bias energy penalty (in kT units) <input type="number" id="biasenergy" value=0>
+        <button id="launchSimButton" onclick="launchSim(useRNA)">Launch a simulation of your nucleic acid for end-to-end distribution free energy</button>
+        <br/>
+        Customize bin functions:<br/>
+        <textarea cols=80 rows=20 id="codeeval"></textarea>
+    </section>
+    <section id="content9">
+        <select id="proteins2" multiple>
+        </select>
+        <input type="button" value="Find optimal positions on sequence" onclick="scoreProteins()">
+        <canvas id="CostChart"></canvas>
+        <div id="scoringdiv"></div>
+    </section>
+    <section id="content10">
+        <table>
+        <tr><td><select id="structureType">
+            <option value=1>Analyze Protein-DNA Structures</option>
+            <option value=2>Analyze DNA-only Structures</option>
+            <option value=3>Analyze Protein-RNA Structures</option>
+            <option value=4>Analyze RNA-only Structures</option>
+        </select></td><td>
+            <input type="checkbox" value="Remove redundant data" id="removeRedundant" checked> Remove redundant entries</td>
+        </tr>
+        <tr>
+            <td>Consider only structures after <input type="date" id="dateAfter"></td>
+            <td>Consider only structures before <input type="date" id="dateBefore"></td>
+        </tr>
+        <tr>
+            <td><input type="checkbox" id="cullEigen"> Use eigenvector reduction</td>
+            <td><input type="checkbox" id="cullStandard"> Use standard reduction</td>
+        </tr>
+        <tr></tr>
+        <tr>
+            <td><input type="checkbox" value="Specify PDB list" id="specificPdbList"> Consider only a specific list of PDB Ids (below)</td>
+            <td>[Above settings other than redundancy will be ignored]</td>
+        </tr>
+        <tr>
+            <td>Description of calculation:</td>
+            <td><input type="text" id="ffdescription"></td>
+        </tr>
+        </table>
+        <textarea placeholder="enter list of PDB Ids separated by spaces (e.g. 1KX5 1AOI 1J5N 1P71)" rows="20" cols="80" id="pdbIdList" onkeyup="validateList(this)"></textarea>
+        <br/><p/>
+        <input type="button" value="Create force field" onclick="submitFF()">
+        <br/><br/>
+            Force Field List
+        <select id="myffs">
+        </select>
+        <input type="button" onclick="downloadFF()" value="Download data"><br/><br/>
+        <input type="button" onclick="loadForceField()" value="Load selected force field"><br/><div id="FFload"></div>
+        Select tetranucleotide: <select id="tetramerList"></select><br/>
+        <select id="plot1">
+            <option value="0">tilt</option>
+            <option value="1">roll</option>
+            <option value="2">twist</option>
+            <option value="3">shift</option>
+            <option value="4">slide</option>
+            <option value="5">rise</option>
+        </select>
+        <select id="plot2">
+            <option value="0">tilt</option>
+            <option value="1">roll</option>
+            <option value="2">twist</option>
+            <option value="3">shift</option>
+            <option value="4">slide</option>
+            <option value="5">rise</option>
+        </select>
+        <input type="button" value="Plot data" onclick="plotStepGraph()">
+        <br/>
+        <select id="dimerList"></select> <input type="button" value="Plot data" onclick="plotStepGraph2()">
+        <div id="scatterplotdiv"></div>
+    </section>
+</main>
+<footer>
+    Dr. Luke Czapla - The Frisch School with Wilma K. Olson Laboratory at Rutgers University
+</footer>
+</body>
+</html>

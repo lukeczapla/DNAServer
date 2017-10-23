@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cd $1
+
+if [ $7 -eq "0" ]
+then
+../../bin/closuremc seq -n $2 -r -radi $3 -gam $4 -twi $5 -k $6 $8 $9 ${10} ${11} ${12} ${13} ${14} ${15} ${16} ${17} ${18} ${19} ${20} ${21} ${22} ${23} ${24} ${25} ${26} ${27} ${28} ${29} ${30} ${31} ${32} ${33} ${34} ${35} ${36} ${37} ${38} > out.log
+
+else
+../../bin/closuremc-proteins seq -n $2 -r -radi $3 -gam $4 -twi $5 -k $6 $8 $9 ${10} ${11} ${12} ${13} ${14} ${15} ${16} ${17} ${18} ${19} ${20} ${21} ${22} ${23} ${24} ${25} ${26} ${27} ${28} ${29} ${30} ${31} ${32} ${33} ${34} ${35} ${36} ${37} ${38} > out.log
+
+fi
+
+tar zcvf result.tar.gz *histogram* *distribution* protein_* *.dat *.pdb seq structure* Jfactor* out.log
+

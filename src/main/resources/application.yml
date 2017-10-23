@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost/simdb?useSSL=false
+    username: root
+    password: password 
+    driverClassName: com.mysql.jdbc.Driver
+    continueOnError: true
+    testOnBorrow: true
+    testOnReturn: false
+    testWhileIdle: true
+    timeBetweenEvictionRunsMillis: 25200000 #7*60*60*1000
+    validationQuery: SELECT 1
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: 8080
+  sessionTimeout: 0
+
+google:
+  clientId: 613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com
+  clientSecret: canbeleftblank
+

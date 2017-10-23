@@ -1,0 +1,155 @@
+
+@import url("https://fonts.googleapis.com/css?family=Open+Sans:400,600,700");
+@import url("https://netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css");
+*, *:before, *:after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box; }
+
+html, body {
+  height: 100%; }
+
+
+body {
+  font: 14px/1 'Open Sans', sans-serif;
+  color: #555;
+  background: #eee; }
+
+header {
+  border: 1px solid #000;
+}
+
+footer {
+  border: 1px solid #333;
+  font-family: 'Andale Mono', AndaleMono, monospace;
+  background-color: #999;
+}
+
+h1 {
+  padding: 20px 0;
+  font-family: 'Andale Mono', AndaleMono, monospace;
+  font-weight: 400;
+  text-align: center;
+  background-color: #999;
+  color: #000;
+  border: 1px solid #000
+}
+
+table {
+    border: 1px solid #000;
+}
+
+p {
+  margin: 0 0 20px;
+  line-height: 1.5; }
+
+main {
+  width: 1200px;
+  padding: 50px;
+  margin: 0 auto;
+  background: #fff; }
+
+section {
+  display: none;
+  padding: 20px 0 0;
+  border-top: 1px solid #ddd; }
+
+canvas {
+    position:relative;
+    margin: 20px;
+}
+
+input.dmenu {
+  display: none;
+}
+
+#steprefs {
+    width: 500px;
+    height: 600px;
+}
+
+.proteingraph {
+}
+
+label {
+  display: inline-block;
+  margin: 0 0 -1px;
+  padding: 15px 25px;
+  font-weight: 600;
+  text-align: center;
+  color: #bbb;
+  border: 1px solid transparent; }
+
+label:before {
+  font-family: fontawesome;
+  font-weight: normal;
+  margin-right: 10px; }
+
+label[for*='1']:before {
+  content: '\f1fa'; }
+
+label[for*='2']:before {
+  content: '\f173'; }
+
+label[for*='3']:before {
+  content: '\f06c'; }
+
+label[for*='4']:before {
+  content: '\f04b'; }
+
+label[for*='5']:before {
+  content: '\f1fe'; }
+
+label[for*='6']:before {
+  content: '\f03d'; }
+
+label[for*='7']:before {
+  content: '\f06c'; }
+
+label[for*='8']:before {
+  content: '\f04b'; }
+
+label[for*='9']:before {
+  content: '\f06c'; }
+
+  label[for*='10']:before {
+    content: '\f1fe'; }
+
+label:hover {
+  color: #888;
+  cursor: pointer; }
+
+input:checked + label {
+  color: #555;
+  border: 1px solid #ddd;
+  border-top: 2px solid orange;
+  border-bottom: 1px solid #fff; }
+
+#tab1:checked ~ #content1,
+#tab2:checked ~ #content2,
+#tab3:checked ~ #content3,
+#tab4:checked ~ #content4,
+#tab5:checked ~ #content5,
+#tab6:checked ~ #content6,
+#tab7:checked ~ #content7,
+#tab8:checked ~ #content8,
+#tab9:checked ~ #content9,
+#tab10:checked ~ #content10 {
+  display: block; }
+
+.mol-container {
+  width: 800px;
+  height: 800px;
+  position: relative; }
+
+@media screen and (max-width: 500px) {
+  label {
+    font-size: 0px; }
+
+  label:before {
+    margin: 0;
+    font-size: 18px; } }
+@media screen and (max-width: 400px) {
+  label {
+    padding: 15px; } }
+
