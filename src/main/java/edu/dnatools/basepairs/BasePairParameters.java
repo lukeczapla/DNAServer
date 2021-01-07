@@ -27,7 +27,9 @@ import org.biojava.nbio.structure.Group;
 import org.biojava.nbio.structure.Structure;
 import org.biojava.nbio.structure.contact.Pair;
 import org.biojava.nbio.structure.geometry.SuperPosition;
+//import org.biojava.nbio.structure.geometry.SuperPositionQCP;
 import org.biojava.nbio.structure.geometry.SuperPositionQCP;
+import org.biojava.nbio.structure.geometry.SuperPositionSVD;
 import org.biojava.nbio.structure.io.PDBFileReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -523,7 +525,7 @@ public class BasePairParameters implements Serializable {
     public Matrix4d basePairReferenceFrame(Pair<Group> pair) {
         Integer type1 = BASE_MAP.get(pair.getFirst().getPDBName());
         Integer type2 = BASE_MAP.get(pair.getSecond().getPDBName());
-        SuperPosition sp = new SuperPositionQCP(true);
+        SuperPosition sp = new SuperPositionSVD(true);
         if (type1 == null || type2 == null) return null;
         PDBFileReader pdbFileReader = new PDBFileReader();
         Structure s1, s2;

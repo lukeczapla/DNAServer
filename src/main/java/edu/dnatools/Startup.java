@@ -22,7 +22,7 @@ import java.io.IOException;
 @Import({WebSecurityConfig.class, SwaggerConfig.class})
 public class Startup {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         SpringApplication.run(Startup.class, args);
     }
 

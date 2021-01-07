@@ -3,8 +3,8 @@ package edu.dnatools.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wordnik.swagger.annotations.Api;
-import com.wordnik.swagger.annotations.ApiOperation;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import edu.dnatools.model.*;
 import edu.dnatools.repository.UserRepository;
 import edu.dnatools.service.BoundaryConditionService;
@@ -60,6 +60,18 @@ public class BoundaryController {
             }
         }
         return new ResponseEntity("ERROR", HttpStatus.BAD_REQUEST);
+    }
+
+    @ApiOperation("Return the base-pair reference frames of a job")
+    @RequestMapping(value = "/getparameters", method = RequestMethod.POST)
+    @JsonView(JsonViews.PDBinput.class)
+    public String readParameters(@RequestBody PDBinput pdb) {
+        if (pdb.getPdbs() == null) {
+            log.debug("No data");
+            return null;
+        }
+        log.debug("Analyzing PDB file of size " + pdb.getPdbs().length());
+        return getParameters(pdb.getPdbs());
     }
 
     @ApiOperation("Return the base-pair reference frames of a job")

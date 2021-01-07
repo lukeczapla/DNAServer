@@ -1,8 +1,8 @@
 package edu.dnatools.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import com.wordnik.swagger.annotations.Api;
-import com.wordnik.swagger.annotations.ApiOperation;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import edu.dnatools.model.*;
 import edu.dnatools.repository.UserRepository;
 import edu.dnatools.service.RCSBService;

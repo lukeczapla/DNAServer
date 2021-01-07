@@ -33,6 +33,37 @@ public class RefTools {
 
     public static String rootfolder = "jobs/";
 
+    public static String getParameters(String pdbfile) {
+        String token = Processor.randomWord(6);
+        try {
+            new File(token).mkdir();
+            File f = new File(token + "/analyze.pdb");
+            FileUtils.writeStringToFile(f, pdbfile);
+            PDBFileReader pdbFileReader = new PDBFileReader();
+            Structure structure = pdbFileReader.getStructure(token + "/analyze.pdb");
+            BasePairParameters bp = new MismatchedBasePairParameters(structure, false, false, false).analyze();
+            try {
+                bp.getLength();
+            } catch (IllegalArgumentException e) {
+                bp = new TertiaryBasePairParameters(structure, true, false).analyze();
+            }
+            double[][] output = new double[bp.getPairingParameters().length][12];
+            double[][] pairingParameters = bp.getPairingParameters();
+            double[][] stepParameters = bp.getStepParameters();
+            for (int i = 0; i < bp.getPairingParameters().length; i++) {
+                for (int j = 0; j < 6; j++) {
+                    output[i][j] = pairingParameters[i][j];
+                    output[i][6+j] = stepParameters[i][j];
+                }
+            }
+            SystemUtils.deleteFolder(token);
+            return gson.toJson(output);
+        } catch (IOException e) {
+            SystemUtils.deleteFolder(token);
+            return null;
+        }
+    }
+
     public static String analyzeReferenceFrames(String pdbfile) {
         String token = Processor.randomWord(6);
         try {

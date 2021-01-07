@@ -15,7 +15,6 @@ import java.util.List;
  */
 @Transactional
 public abstract class AbstractService<T extends IDable<ID>, ID extends Serializable> implements JpaService<T, ID> {
-
     @PersistenceContext
     protected EntityManager em;
 
@@ -32,13 +31,13 @@ public abstract class AbstractService<T extends IDable<ID>, ID extends Serializa
     }
 
     protected final T checkExistsAndGet(ID id) {
-        return checkFound(getDao().findOne(id));
+        return checkFound(getDao().getOne(id));
     }
 
     @Override
     public T add(T entity) {
-        if(entity.getId() != null && getDao().exists(entity.getId()))
-            throw new RuntimeException("Assignment already exists");
+        if(entity.getId() != null && getDao().existsById(entity.getId()))
+            throw new RuntimeException("Element with this Id already exists");
         T t = getDao().saveAndFlush(entity);
 
         return t;
@@ -46,7 +45,7 @@ public abstract class AbstractService<T extends IDable<ID>, ID extends Serializa
 
     @Override
     public void delete(ID id) {
-        getDao().delete(id);
+        getDao().deleteById(id);
     }
 
     @Override
@@ -56,7 +55,7 @@ public abstract class AbstractService<T extends IDable<ID>, ID extends Serializa
 
     public static <T> T checkFound(final T resource) {
         if (resource == null) {
-            throw new RuntimeException("Assignment not found");
+            throw new RuntimeException("Element not found");
         }
 
         return resource;
