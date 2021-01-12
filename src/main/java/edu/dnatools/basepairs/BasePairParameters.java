@@ -70,42 +70,54 @@ public class BasePairParameters implements Serializable {
     // These are hard-coded to avoid problems with resource paths.
     public static final String[] STANDARD_BASES = new String[] {
             "SEQRES   1 A    1  A\n" +
+                    "ATOM      1  C1'   A A   1      -2.479   5.346   0.000\n" +
                     "ATOM      2  N9    A A   1      -1.291   4.498   0.000\n" +
                     "ATOM      3  C8    A A   1       0.024   4.897   0.000\n" +
                     "ATOM      4  N7    A A   1       0.877   3.902   0.000\n" +
                     "ATOM      5  C5    A A   1       0.071   2.771   0.000\n" +
                     "ATOM      6  C6    A A   1       0.369   1.398   0.000\n" +
+                    "ATOM      7  N6    A A   1       1.611   0.909   0.000\n" +
                     "ATOM      8  N1    A A   1      -0.668   0.532   0.000\n" +
                     "ATOM      9  C2    A A   1      -1.912   1.023   0.000\n" +
                     "ATOM     10  N3    A A   1      -2.320   2.290   0.000\n" +
                     "ATOM     11  C4    A A   1      -1.267   3.124   0.000\n" +
                     "END",
             "SEQRES   1 A    1  G\n" +
+                    "ATOM      1  C1'   G A   1      -2.477   5.399   0.000\n" +
                     "ATOM      2  N9    G A   1      -1.289   4.551   0.000\n" +
                     "ATOM      3  C8    G A   1       0.023   4.962   0.000\n" +
                     "ATOM      4  N7    G A   1       0.870   3.969   0.000\n" +
                     "ATOM      5  C5    G A   1       0.071   2.833   0.000\n" +
                     "ATOM      6  C6    G A   1       0.424   1.460   0.000\n" +
+                    "ATOM      7  O6    G A   1       1.554   0.955   0.000\n" +
                     "ATOM      8  N1    G A   1      -0.700   0.641   0.000\n" +
                     "ATOM      9  C2    G A   1      -1.999   1.087   0.000\n" +
+                    "ATOM     10  N2    G A   1      -2.949   0.139  -0.001\n" +
                     "ATOM     11  N3    G A   1      -2.342   2.364   0.001\n" +
                     "ATOM     12  C4    G A   1      -1.265   3.177   0.000\n" +
                     "END",
             "SEQRES   1 A    1  T\n" +
+                    "ATOM      1  C1'   T A   1      -2.481   5.354   0.000\n" +
                     "ATOM      2  N1    T A   1      -1.284   4.500   0.000\n" +
                     "ATOM      3  C2    T A   1      -1.462   3.135   0.000\n" +
+                    "ATOM      4  O2    T A   1      -2.562   2.608   0.000\n" +
                     "ATOM      5  N3    T A   1      -0.298   2.407   0.000\n" +
                     "ATOM      6  C4    T A   1       0.994   2.897   0.000\n" +
+                    "ATOM      7  O4    T A   1       1.944   2.119   0.000\n" +
                     "ATOM      8  C5    T A   1       1.106   4.338   0.000\n" +
+                    "ATOM      9  C7    T A   1       2.466   4.961   0.001\n" +
                     "ATOM     10  C6    T A   1      -0.024   5.057   0.000\n" +
                     "END",
             "SEQRES   1 A    1  C\n" +
-                    "ATOM      2  N1    C A   1      -1.285   4.542   0.000\n" +
-                    "ATOM      3  C2    C A   1      -1.472   3.158   0.000\n" +
-                    "ATOM      5  N3    C A   1      -0.391   2.344   0.000\n" +
-                    "ATOM      6  C4    C A   1       0.837   2.868   0.000\n" +
-                    "ATOM      8  C5    C A   1       1.056   4.275   0.000\n" +
-                    "ATOM      9  C6    C A   1      -0.023   5.068   0.000\n" +
+                    "ATOM      1  C1'   C A   1      -2.477   5.402   0.000\n" +
+                    "ATOM      2  N1    C A   1      -1.287   4.523   0.000\n" +
+                    "ATOM      3  C2    C A   1      -1.477   3.143   0.000\n" +
+                    "ATOM      4  O2    C A   1      -2.623   2.684   0.001\n" +
+                    "ATOM      5  N3    C A   1      -0.385   2.335   0.000\n" +
+                    "ATOM      6  C4    C A   1       0.849   2.855   0.000\n" +
+                    "ATOM      7  N4    C A   1       1.883   2.020   0.001\n" +
+                    "ATOM      8  C5    C A   1       1.065   4.271   0.000\n" +
+                    "ATOM      9  C6    C A   1      -0.038   5.062   0.000\n" +
                     "END",
             "SEQRES   1 A    1  U\n" +
                     "ATOM      2  N1    U A   1      -1.284   4.500   0.000\n" +
