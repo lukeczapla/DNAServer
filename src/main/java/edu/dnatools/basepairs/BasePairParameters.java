@@ -149,6 +149,7 @@ public class BasePairParameters implements Serializable {
     protected double[][] stepParameters;
     protected List<String> pairingNames = new ArrayList<>();
     protected List<Matrix4d> referenceFrames = new ArrayList<>();
+    protected List<Matrix4d> baseReferenceFrames = new ArrayList<>();
 
 
     /**
@@ -285,6 +286,10 @@ public class BasePairParameters implements Serializable {
 
     public List<Matrix4d> getReferenceFrames() {
         return referenceFrames;
+    }
+
+    public List<Matrix4d> getBaseReferenceFrames() {
+        return baseReferenceFrames;
     }
 
     /**
@@ -551,6 +556,7 @@ public class BasePairParameters implements Serializable {
         }
         assert count == std1.getAtoms().size();
         Matrix4d ref1 = (Matrix4d)sp.superposeAndTransform(pointact, pointref).clone();
+        baseReferenceFrames.add((Matrix4d)ref1.clone());
 
         pointref = new Point3d[std2.getAtoms().size()];
         pointact = new Point3d[std2.getAtoms().size()];
@@ -584,7 +590,9 @@ public class BasePairParameters implements Serializable {
         ref2.setColumn(1, y3);
         ref2.setColumn(2, z3);
 
-        temp.add(ref2);
+        baseReferenceFrames.add((Matrix4d)ref2.clone());
+
+     /*   temp.add(ref2);
         temp.mul(0.5);
         double[] x3 = new double[4];
         temp.getColumn(0, x3);
@@ -606,15 +614,19 @@ public class BasePairParameters implements Serializable {
             }
             temp.setColumn(i, v[i]);
         }
-
+*/
         // calculate pairing parameters: buckle, propeller, opening, shear, stretch, stagger
         temp2.invert();
         temp2.mul(ref2);
         pairParameters = calculateTp(temp2);
+
         for (int i = 0; i < 6; i++) pairParameters[i] *= -1;
 
+
+
         // return the central frame of the base pair
-        return temp;
+        ref2.mul(calculateM(pairParameters));
+        return ref2;
 
     }
 
@@ -638,6 +650,45 @@ public class BasePairParameters implements Serializable {
 
 
     // The following methods are just helper classes for the rapid analyze of base-pair geometry.
+
+    public static Matrix4d calculateM(double[] tp) {
+        Matrix4d M = new Matrix4d();
+        M.setIdentity();
+        double t1 = tp[0]*PI/180.0;
+        double t2 = tp[1]*PI/180.0;
+        double t3 = tp[2]*PI/180.0;
+
+        double gamma = 0.5*sqrt(t1*t1+t2*t2);
+        double phi = Math.atan2(t1,t2);
+        double omega = t3;
+
+        double sp = Math.sin(phi);
+        double cp = Math.cos(phi);
+        double sm = Math.sin(omega/2.0-phi);
+        double cm = Math.cos(omega/2.0-phi);
+        double sg = Math.sin(gamma);
+        double cg = Math.cos(gamma);
+
+        M.setElement(0, 0, cm*cg*cp-sm*sp);
+        M.setElement(0, 1, -cm*cg*sp-sm*cp);
+        M.setElement(0, 2, cm*sg);
+        M.setElement(1, 0, sm*cg*cp+cm*sp);
+        M.setElement(1, 1, -sm*cg*sp+cm*cp);
+        M.setElement(1, 2, sm*sg);
+        M.setElement(2, 0, -sg*cp);
+        M.setElement(2, 1, sg*sp);
+        M.setElement(2, 2, cg);
+
+        sp = Math.sin(phi); cp = Math.cos(phi); sg = Math.sin(gamma/2.0); cg = Math.cos(gamma/2.0);
+
+        M.setElement(0, 3, (tp[3]*(cm*cg*cp-sm*sp) + tp[4]*(-cm*cg*sp-sm*cp) + tp[5]*(cm*sg))/2.0);
+        M.setElement(1, 3, (tp[3]*(sm*cg*cp+cm*sp) + tp[4]*(-sm*cg*sp+cm*cp) + tp[5]*(sm*sg))/2.0);
+        M.setElement(2, 3, (tp[3]*(-sg*cp) + tp[4]*(sg*sp) + tp[5]*(cg))/2.0);
+
+        return M;
+
+    }
+
     /**
      * This method calculates pairing and step parameters from 4x4 transformation matrices (used internally)
      * that comes out as a Matrix4d.
