@@ -1,4 +1,174 @@
 
+let queryProteinDNA = {
+    "query": {
+        "type": "group",
+        "logical_operator": "and",
+        "nodes": [{
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "exptl.method",
+                "operator": "exact_match",
+                "value": "X-RAY DIFFRACTION"
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_DNA",
+                "operator": "greater",
+                "value": 1
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+                "operator": "greater",
+                "value": 0
+            }
+        }]
+    },
+    "request_options": {
+        "return_all_hits": true,
+        "sort": [{
+            "sort_by": "rcsb_entry_info.resolution_combined",
+            "direction": "asc"
+        }]
+    },
+    "return_type": "entry"
+};
+
+let queryDNAonly = {
+    "query": {
+        "type": "group",
+        "logical_operator": "and",
+        "nodes": [{
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "exptl.method",
+                "operator": "exact_match",
+                "value": "X-RAY DIFFRACTION"
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_DNA",
+                "operator": "greater",
+                "value": 1
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+                "operator": "exact_match",
+                "value": 0
+            }
+        }]
+    },
+    "request_options": {
+        "return_all_hits": true,
+        "sort": [{
+            "sort_by": "rcsb_entry_info.resolution_combined",
+            "direction": "asc"
+        }]
+    },
+    "return_type": "entry"
+};
+
+let queryProteinRNA = {
+    "query": {
+        "type": "group",
+        "logical_operator": "and",
+        "nodes": [{
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "exptl.method",
+                "operator": "exact_match",
+                "value": "X-RAY DIFFRACTION"
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_RNA",
+                "operator": "greater",
+                "value": 1
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+                "operator": "greater",
+                "value": 0
+            }
+        }]
+    },
+    "request_options": {
+        "return_all_hits": true,
+        "sort": [{
+            "sort_by": "rcsb_entry_info.resolution_combined",
+            "direction": "asc"
+        }]
+    },
+    "return_type": "entry"
+};
+
+
+let queryRNAonly = {
+    "query": {
+        "type": "group",
+        "logical_operator": "and",
+        "nodes": [{
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "exptl.method",
+                "operator": "exact_match",
+                "value": "X-RAY DIFFRACTION"
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_RNA",
+                "operator": "greater",
+                "value": 1
+            }
+        },
+        {
+            "type": "terminal",
+            "service": "text",
+            "parameters": {
+                "attribute": "rcsb_entry_info.polymer_entity_count_protein",
+                "operator": "exact_match",
+                "value": 0
+            }
+        }]
+    },
+    "request_options": {
+        "return_all_hits": true,
+        "sort": [{
+            "sort_by": "rcsb_entry_info.resolution_combined",
+            "direction": "asc"
+        }]
+    },
+    "return_type": "entry"
+};
+
+
 function retrievePDB(pdbname) {
   $.ajax({method: "GET", url: "https://files.rcsb.org/download/" + pdbname + ".pdb"}).done(function(data) {
      $("#pdbref").val(data);
@@ -20,36 +190,30 @@ function getPDB(pdbname) {
 
 
 function submitFF() {
-    let request = { 'orgPdbQuery': {
-                         'queryType': 'org.pdb.query.simple.ChainTypeQuery',
-                         'description': 'Luke Czapla JSON to XML example',
-                         'containsProtein': 'N',
-                         'containsDna': 'N',
-                         'containsRna': 'N',
-                         'containsHybrid': 'N'
-                     }};
+    let request = queryProteinDNA;
      let opt = $("#structureType").val();
      console.log(opt);
      switch (parseInt(opt)) {
-        case 1: request['orgPdbQuery']['containsProtein'] = 'Y';
-                request['orgPdbQuery']['containsDna'] = 'Y'; break;
-        case 2: request['orgPdbQuery']['containsProtein'] = 'N';
-                request['orgPdbQuery']['containsDna'] = 'Y'; break;
-        case 3: request['orgPdbQuery']['containsProtein'] = 'Y';
-                request['orgPdbQuery']['containsRna'] = 'Y'; break;
-        case 4: request['orgPdbQuery']['containsProtein'] = 'N';
-                request['orgPdbQuery']['containsRna'] = 'Y'; break;
-        default: request['orgPdbQuery']['containsDna'] = 'Y'; break;
+        case 1: request = queryProteinDNA; break;
+        case 2: request = queryDNAonly; break;
+        case 3: request = queryProteinRNA; break;
+        case 4: request = queryRNAonly; break;
+        default: request = queryProteinDNA; break;
      }
-     let x2js = new X2JS();
-     let xmlString = x2js.json2xml_str(request);
-     console.log(xmlString);
      //let request = "<orgPdbQuery><queryType>org.pdb.query.simple.ChainTypeQuery</queryType><description>Luke Czapla for Wilma Olson lab</description><containsProtein>Y</containsProtein><containsDna>Y</containsDna><containsRna>N</containsRna></orgPdbQuery>";
-     $.ajax({url: 'http://www.rcsb.org/pdb/rest/search/?sortfield=Resolution', method: 'POST', data: xmlString})
+     $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v1/query',
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(request)})
      .done(function(result) {
- //        console.log(result);
-
-             let pdbdata = {pdbs: "", pdbList: result, RNA: false, cullEigen: $("#cullEigen").is(":checked"),
+         console.log(result);
+            let pdblist = "";
+            for (let i = 0; i < result.result_set.length; i++) {
+                pdblist += result.result_set[i].identifier + "\n";
+            }
+             let pdbdata = {pdbs: "", pdbList: pdblist, RNA: false, cullEigen: $("#cullEigen").is(":checked"),
                 cullStandard: $("#cullStandard").is(":checked")};
              console.log(pdbdata);
 

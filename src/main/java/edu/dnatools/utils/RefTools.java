@@ -1,5 +1,6 @@
 package edu.dnatools.utils;
 
+import com.google.common.io.CharSource;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.dnatools.basepairs.TertiaryBasePairParameters;
@@ -9,6 +10,7 @@ import org.biojava.nbio.structure.Structure;
 import edu.dnatools.basepairs.BasePairParameters;
 import edu.dnatools.basepairs.MismatchedBasePairParameters;
 import org.biojava.nbio.structure.io.PDBFileReader;
+import org.hibernate.engine.jdbc.ReaderInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +20,7 @@ import static java.lang.Math.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -34,13 +37,11 @@ public class RefTools {
     public static String rootfolder = "jobs/";
 
     public static String getParameters(String pdbfile) {
-        String token = Processor.randomWord(6);
         try {
-            new File(token).mkdir();
-            File f = new File(token + "/analyze.pdb");
-            FileUtils.writeStringToFile(f, pdbfile);
             PDBFileReader pdbFileReader = new PDBFileReader();
-            Structure structure = pdbFileReader.getStructure(token + "/analyze.pdb");
+            InputStream targetStream =
+                    new ReaderInputStream(CharSource.wrap(pdbfile).openStream());
+            Structure structure = pdbFileReader.getStructure(targetStream);
             BasePairParameters bp = new MismatchedBasePairParameters(structure, false, false, false).analyze();
             try {
                 bp.getLength();
@@ -56,22 +57,18 @@ public class RefTools {
                     output[i][6+j] = stepParameters[i][j];
                 }
             }
-            SystemUtils.deleteFolder(token);
             return gson.toJson(output);
         } catch (IOException e) {
-            SystemUtils.deleteFolder(token);
             return null;
         }
     }
 
     public static String analyzeReferenceFrames(String pdbfile) {
-        String token = Processor.randomWord(6);
         try {
-            new File(token).mkdir();
-            File f = new File(token + "/analyze.pdb");
-            FileUtils.writeStringToFile(f, pdbfile);
             PDBFileReader pdbFileReader = new PDBFileReader();
-            Structure structure = pdbFileReader.getStructure(token + "/analyze.pdb");
+            InputStream targetStream =
+                    new ReaderInputStream(CharSource.wrap(pdbfile).openStream());
+            Structure structure = pdbFileReader.getStructure(targetStream);
             BasePairParameters bp = new MismatchedBasePairParameters(structure, false, false, false).analyze();
             try {
                 bp.getLength();
@@ -85,35 +82,10 @@ public class RefTools {
                     refFrames[i][j][k] = m.getElement(j,k);
                 }
             }
-            SystemUtils.deleteFolder(token);
             return gson.toJson(refFrames);
         } catch (IOException e) {
-            SystemUtils.deleteFolder(token);
             return null;
         }
-    }
-
-    public static String analyzeAndReturnReferenceFrames(String pdbfile) {
-        String token = Processor.randomWord(6);
-        try {
-            new File(token).mkdir();
-            File f = new File(token+"/analyze.pdb");
-            FileUtils.writeStringToFile(f, pdbfile);
-            List<String> args = Arrays.asList("./reference", token);
-            Process process = new ProcessBuilder(args).start();
-            if (!process.waitFor(1, TimeUnit.MINUTES)) {
-                process.destroy();
-                log.debug("Analyzer ran out of time");
-            }
-            log.debug("Analyzing ref_frames.dat");
-            String result = readRefFileToJSON(token+"/ref_frames.dat");
-            SystemUtils.deleteFolder(token);
-            return result;
-        } catch (IOException|InterruptedException e) {
-            log.debug(e.getMessage());
-        }
-        SystemUtils.deleteFolder(token);
-        return null;
     }
 
     /**
@@ -197,7 +169,6 @@ public class RefTools {
             }
         } catch (IOException e) {
             log.debug("IOException readSteps");
-
             return null;
         }
         return null;
