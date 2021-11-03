@@ -18,4 +18,4 @@ ABOUT THIS APP
 
  - Even without the backend software, the application can still analyze elastic models and calculate the persistance length of a DNA sequence, and simulate DNA locally using two different sampling methodologies (Gaussian random number generator and Metropolis Monte Carlo with a possible biasing function a.k.a. Wang-Landau method)
 
-
+- This version does the RCSB analysis but using the 3DNA system of coarse-graining, another project for the Curves+ system (DNAServer-EPFL) implemented this system.
