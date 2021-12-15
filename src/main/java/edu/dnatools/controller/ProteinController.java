@@ -37,7 +37,7 @@ public class ProteinController {
 
 
     @ApiOperation("Add a new protein to the database")
-    @RequestMapping(value = "/addprotein", method = RequestMethod.PUT)
+    @RequestMapping(value = "/addprotein", method = RequestMethod.POST)
     @JsonView(JsonViews.Protein.class)
     public ResponseEntity addProtein(@RequestBody Protein protein, Principal prince) {
         Protein result = proteinService.add(protein);
@@ -47,7 +47,7 @@ public class ProteinController {
     }
 
     @ApiOperation("Delete a protein from the database")
-    @RequestMapping(value = "/deleteprotein/{id}", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/deleteprotein/{id}", method = RequestMethod.GET)
     @JsonView(JsonViews.Protein.class)
     public String deleteProtein(@PathVariable("id")Long Id, Principal prince) {
         if (prince != null) {
@@ -57,7 +57,7 @@ public class ProteinController {
     }
 
     @ApiOperation("Update a protein in the database")
-    @RequestMapping(value = "/renameprotein/{id}", method = RequestMethod.PUT)
+    @RequestMapping(value = "/renameprotein/{id}", method = RequestMethod.POST)
     @JsonView(JsonViews.Protein.class)
     public Protein updateProtein(@PathVariable("id")Long Id, @RequestBody String name, Principal prince) {
         if (prince != null) {
@@ -99,7 +99,7 @@ public class ProteinController {
     }
 
     @ApiOperation("Add a new protein to the database")
-    @RequestMapping(value = "/addstructure", method = RequestMethod.PUT)
+    @RequestMapping(value = "/addstructure", method = RequestMethod.POST)
     @JsonView(JsonViews.ProteinStructure.class)
     public ResponseEntity addProteinStructure(@RequestBody ProteinStructure protein, Principal prince) {
         ProteinStructure result = proteinStructureService.add(protein);

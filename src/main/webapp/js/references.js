@@ -126,7 +126,7 @@ function addBC() {
             'Content-Type': 'application/json'
         },
         url: "/addbc",
-        method: "PUT",
+        method: "POST",
         data: JSON.stringify(bcdata),
         success: function(result) {
             if (result == "OK") {

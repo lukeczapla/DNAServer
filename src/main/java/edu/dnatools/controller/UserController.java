@@ -123,7 +123,7 @@ public class UserController {
 
 
     @ApiOperation("Log out current user session")
-    @RequestMapping(value = "/conf/user", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/conf/user/logout", method = RequestMethod.GET)
     public void logout(HttpSession session) {
         session.invalidate();
     }
@@ -131,7 +131,6 @@ public class UserController {
 
     @RequestMapping(value = "/conf/user/test", method = RequestMethod.GET)
     public ResponseEntity test(Authentication authentication) {
-//        System.out.println(SecurityContextHolder.getContext().getAuthentication().isAuthenticated());
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
             log.info(SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString());
         }

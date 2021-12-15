@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.*;
 
 /**
@@ -33,6 +34,7 @@ public class ForceField {
     Logger log = LoggerFactory.getLogger(ForceField.class);
     private String WCsteps = "CG CA TA AG GG AA GA AT AC GC";
     private String tetramers = "AAAA AAAC AAAG AAAT CAAA CAAC CAAG CAAT GAAA GAAC GAAG GAAT TAAA TAAC TAAG TAAT AACA AACC AACG AACT CACA CACC CACG CACT GACA GACC GACG GACT TACA TACC TACG TACT AAGA AAGC AAGG AAGT CAGA CAGC CAGG CAGT GAGA GAGC GAGG GAGT TAGA TAGC TAGG TAGT AATA AATC AATG AATT CATA CATG GATA GATC GATG TATA ACAA ACAC ACAG ACAT CCAA CCAC CCAG CCAT GCAA GCAC GCAG GCAT TCAA TCAC TCAG TCAT ACGA ACGC ACGG ACGT CCGA CCGG GCGA GCGC GCGG TCGA AGAA AGAC AGAG AGAT CGAA CGAC CGAG CGAT GGAA GGAC GGAG GGAT TGAA TGAC TGAG TGAT AGCA AGCC AGCG AGCT CGCA CGCG GGCA GGCC GGCG TGCA AGGA AGGC AGGG AGGT CGGA CGGC CGGG CGGT GGGA GGGC GGGG GGGT TGGA TGGC TGGG TGGT ATAA ATAC ATAG ATAT CTAA CTAG GTAA GTAC GTAG TTAA";
+    //private final String tetramerList = Arrays.asList(tetramers.split(" "));
 
     private Map<String, List<INDArray>> data = new HashMap<>();
     private Map<String, List<INDArray>> tetramerdata = new HashMap<>();
@@ -76,13 +78,15 @@ public class ForceField {
             for (int i = 0; i < pdb.length; i++) {
                 // grab the record and get started!
                 Structure s;
+                log.info("Loading {}", pdb[i]);
                 try {
                     s = StructureIO.getStructure(pdb[i]);
-                } catch (IOException | StructureException e) {
+                } catch (Exception e) {
+                    log.error(e.getMessage());
                     continue;
                 }
 
-                if (s == null || !s.isCrystallographic()) continue;
+                if (s == null) continue;
                 // skip data that's before the afterDate and that's after the beforeDate
                 if (pin.getAfterDate() != null && s.getPDBHeader().getDepDate() != null && s.getPDBHeader().getDepDate().before(pin.getAfterDate())) {
                     log.info("After, Skipping " + pdb[i]);
@@ -109,10 +113,10 @@ public class ForceField {
                 info.ecodDomains = ecodList;
                 info.pdbId = pdb[i];
 
-                if (s != null && s.getChains() != null) for (Chain c : s.getChains()) {
+                if (s.getChains() != null) for (Chain c : s.getChains()) {
                     if (c.isProtein()) info.aaSequences.add(c.getAtomSequence());
                 }
-                if (s != null && s.getChains() != null) for (Chain c : nucleic)
+                if (s.getChains() != null) for (Chain c : nucleic)
                     info.naSequences.add(c.getAtomSequence());
 
                 boolean dup = false;
@@ -122,7 +126,7 @@ public class ForceField {
                             for (String key : sd.keySet()) {
                                 StructuralData d = sd.get(key);
                                 if (d.naSequences.size() > 0 &&
-                                        d.naSequences.get(0).equals(info.naSequences.get(0)) && d.aaSequences.size() == d.aaSequences.size()) {
+                                        d.naSequences.get(0).equals(info.naSequences.get(0)) && d.aaSequences.size() == info.aaSequences.size()) {
                                     //sd.put(pdb[i], info);
                                     dup = true;
                                     break;
@@ -179,10 +183,11 @@ public class ForceField {
                         ctx += step;
                         if (k == region.length()-1) ctx += ".";
                         else ctx += region.charAt(k+1);
-
-                        INDArray parameters = Nd4j.create(1, 6);
-                        for (int v = 0; v < 6; v++)
-                            parameters.getColumn(v).assign(entry.getStepParameters()[counter][v]);
+                        double[] pW = entry.get30Coordinates(counter);
+                        double[] pC = entry.reversePacking(entry.get30Coordinates(counter));
+                        INDArray parameters = Nd4j.create(1, 30);
+                        for (int v = 0; v < 30; v++)
+                            parameters.getColumn(v).assign(pW[v]);
                         if (stepSet.contains(step)) {
                             if (!data.containsKey(step)) {
                                 data.put(step, new Vector<>());
@@ -205,9 +210,9 @@ public class ForceField {
                                         tetramerdata.put(ctx, new Vector<>());
                                     }
                                     stepdata = tetramerdata.get(ctx);
-                                    INDArray parameters2 = parameters.dup();
-                                    parameters2.getColumn(0).muli(-1.0);
-                                    parameters2.getColumn(3).muli(-1.0);
+                                    INDArray parameters2 = Nd4j.create(1, 30);
+                                    for (int v = 0; v < 30; v++)
+                                        parameters2.getColumn(v).assign(pC[v]);
                                     stepdata.add(parameters2);
                                     ds = new StepData(parameters2);
                                     nmap.put(ds, info);
@@ -221,8 +226,9 @@ public class ForceField {
                             }
                             List<INDArray> stepdata = data.get(step);
                             ctx = complementContext(ctx);
-                            parameters.getColumn(0).muli(-1.0);
-                            parameters.getColumn(3).muli(-1.0);
+                            parameters = Nd4j.create(1, 30);
+                            for (int v = 0; v < 30; v++)
+                                parameters.getColumn(v).assign(pC[v]);
                             stepdata.add(parameters);
                             StepData ds = new StepData(parameters);
                             nmap.put(ds, info);
@@ -266,7 +272,7 @@ public class ForceField {
             sb.append(s + "\n" + sd.get(s));
         }
         try {
-            FileUtils.write(new File(rootfolder + code + "/structures.txt"), sb.toString(), false);
+            FileUtils.write(new File(rootfolder + code + "/structures.txt"), sb.toString(), Charset.defaultCharset(), false);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -274,24 +280,30 @@ public class ForceField {
 
 
     public INDArray cullEigen(INDArray dataset, double ndevs, StringBuilder discardedData) {
-        PCA myPCA = new PCA(dataset);
+        INDArray reshaped = Nd4j.zeros(dataset.rows(), 18);
+        for (int i = 0; i < 18; i++) {
+            if (i < 6) reshaped.getColumn(i).setData(dataset.getColumn(i).data());
+            else if (i < 12) reshaped.getColumn(i).setData(dataset.getColumn(6+i).data());
+            else reshaped.getColumn(i).setData(dataset.getColumn(12+i).data());
+        }
+        PCA myPCA = new PCA(reshaped);
         INDArray factors = myPCA.getEigenvalues();
         int count = 0;
         for (int i = 0; i < dataset.rows(); i++) {
-            INDArray components = myPCA.convertToComponents(dataset.getRow(i));
-            for (int j = 0; j < 6; j++) {
+            INDArray components = myPCA.convertToComponents(reshaped.getRow(i));
+            for (int j = 0; j < 18; j++) {
                 if (Math.abs(components.getDouble(j)) > ndevs / Math.sqrt(factors.getDouble(j))) {
                     break;
                 }
-                if (j == 5) count++;
+                if (j == 17) count++;
             }
         }
-        INDArray culledArray = Nd4j.create(count, 6);
+        INDArray culledArray = Nd4j.create(count, 30);
         int total = count;
         count = 0;
         for (int i = 0; i < dataset.rows(); i++) {
-            INDArray components = myPCA.convertToComponents(dataset.getRow(i));
-            for (int j = 0; j < 6; j++) {
+            INDArray components = myPCA.convertToComponents(reshaped.getRow(i));
+            for (int j = 0; j < 18; j++) {
                 if (Math.abs(components.getDouble(j)) > ndevs / Math.sqrt(factors.getDouble(j))) {
                     discardedData.append((dataset.getRow(i)));
                     StepData st = new StepData(dataset.getRow(i));
@@ -303,7 +315,7 @@ public class ForceField {
                     discardedData.append("\n");
                     break;
                 }
-                if (j == 5) culledArray.putRow(count++, dataset.getRow(i));
+                if (j == 17) culledArray.putRow(count++, dataset.getRow(i));
             }
         }
         assert count == total;
@@ -312,34 +324,40 @@ public class ForceField {
 
 
     public INDArray cullStd(INDArray dataset, double ndevs, StringBuilder discardedData) {
-        INDArray mean = Nd4j.create(1, 6);
+        INDArray reshaped = Nd4j.zeros(dataset.rows(), 18);
+        for (int i = 0; i < 18; i++) {
+            if (i < 6) reshaped.getColumn(i).setData(dataset.getColumn(i).data());
+            else if (i < 12) reshaped.getColumn(i).setData(dataset.getColumn(6+i).data());
+            else reshaped.getColumn(i).setData(dataset.getColumn(12+i).data());
+        }
+        INDArray mean = Nd4j.create(1, 18);
         for (int i = 0; i < dataset.rows(); i++) {
-            mean.addi(dataset.getRow(i));
+            mean.addi(reshaped.getRow(i));
         }
         mean.divi(dataset.rows());
-        INDArray stddev = Nd4j.create(1, 6);
+        INDArray stddev = Nd4j.create(1, 18);
         for (int i = 0; i < dataset.rows(); i++) {
-            stddev.addi(Transforms.pow(dataset.getRow(i).sub(mean), 2.0, true));
+            stddev.addi(Transforms.pow(reshaped.getRow(i).sub(mean), 2.0, true));
         }
         stddev.divi(dataset.rows());
         Transforms.pow(stddev, 0.5, false);
 
         int count = 0;
         for (int i = 0; i < dataset.rows(); i++) {
-            INDArray dev = dataset.getRow(i).sub(mean);
-            for (int j = 0; j < 6; j++) {
+            INDArray dev = reshaped.getRow(i).sub(mean);
+            for (int j = 0; j < 18; j++) {
                 if (Math.abs(dev.getDouble(j)) > ndevs * stddev.getDouble(j)) {
                     break;
                 }
-                if (j == 5) count++;
+                if (j == 17) count++;
             }
         }
-        INDArray culledArray = Nd4j.create(count, 6);
+        INDArray culledArray = Nd4j.create(count, 30);
         int total = count;
         count = 0;
         for (int i = 0; i < dataset.rows(); i++) {
-            INDArray dev = dataset.getRow(i).sub(mean);
-            for (int j = 0; j < 6; j++) {
+            INDArray dev = reshaped.getRow(i).sub(mean);
+            for (int j = 0; j < 18; j++) {
                 if (Math.abs(dev.getDouble(j)) > ndevs * stddev.getDouble(j)) {
                     discardedData.append((dataset.getRow(i)));
                     StepData st = new StepData(dataset.getRow(i));
@@ -350,7 +368,7 @@ public class ForceField {
                     }
                     break;
                 }
-                if (j == 5) culledArray.putRow(count++, dataset.getRow(i));
+                if (j == 17) culledArray.putRow(count++, dataset.getRow(i));
             }
         }
         assert count == total;
@@ -371,13 +389,13 @@ public class ForceField {
             if (data.get(key) == null) continue;
             int N = data.get(key).size();
             boolean sc = BasePairParameters.complement(key, RNA).equals(key);
-            INDArray totals = Nd4j.create((sc ? 2 * N : N), 6);
+            INDArray totals = Nd4j.create((sc ? 2 * N : N), 30);
             for (int i = 0; i < data.get(key).size(); i++) {
-                totals.putRow(i, data.get(key).get(i).reshape(1, 6).dup());
+                totals.putRow(i, data.get(key).get(i).reshape(1, 30).dup());
                 if (sc) {
                     data.get(key).get(i).getColumn(0).negi();
                     data.get(key).get(i).getColumn(3).negi();
-                    totals.putRow(i + N, data.get(key).get(i).reshape(1, 6).dup());
+                    totals.putRow(i + N, data.get(key).get(i).reshape(1, 30).dup());
                     data.get(key).get(i).getColumn(0).negi();
                     data.get(key).get(i).getColumn(3).negi();
                 }
@@ -403,7 +421,7 @@ public class ForceField {
                 if (culledArray == null) culledArray = cullStd(totals, 3.0, ds);
                 else culledArray = cullStd(culledArray, 3.0, ds);
                 for (int j = 0; j < 9; j++)
-                    culledArray = cullEigen(culledArray, 3.0, ds);
+                    culledArray = cullStd(culledArray, 3.0, ds);
             }
             if (input.getCullStandard() != null && input.getCullEigen() != null && !input.getCullStandard() && !input.getCullEigen())
                 culledArray = totals.dup();
@@ -436,10 +454,10 @@ public class ForceField {
         Gson gson2 = new GsonBuilder().setPrettyPrinting().create();
 
         try {
-            FileUtils.write(new File(rootfolder + code + "/steps.txt"), sb2.toString(), false);
-            FileUtils.write(new File(rootfolder + code + "/forcefield.txt"), sb.toString(), false);
-            FileUtils.write(new File(rootfolder + code + "/pdna.txt"), gson2.toJson(jfp), false);
-            FileUtils.write(new File(rootfolder + code + "/discarded.txt"), ds.toString(), false);
+            FileUtils.write(new File(rootfolder + code + "/steps.txt"), sb2.toString(), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/forcefield.txt"), sb.toString(), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/pdna.txt"), gson2.toJson(jfp), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/discarded.txt"), ds.toString(), Charset.defaultCharset(), false);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -456,13 +474,13 @@ public class ForceField {
             if (tetramerdata.get(key) == null || tetramerdata.get(key).size() < 1) continue;
             int N = tetramerdata.get(key).size();
             boolean sc = complementContext(key).equals(key);
-            INDArray totals = Nd4j.create((sc ? 2 * N : N), 6);
+            INDArray totals = Nd4j.create((sc ? 2 * N : N), 30);
             for (int i = 0; i < tetramerdata.get(key).size(); i++) {
-                totals.putRow(i, tetramerdata.get(key).get(i).reshape(1, 6).dup());
+                totals.putRow(i, tetramerdata.get(key).get(i).reshape(1, 30).dup());
                 if (sc) {
                     tetramerdata.get(key).get(i).getColumn(0).negi();
                     tetramerdata.get(key).get(i).getColumn(3).negi();
-                    totals.putRow(i + N, tetramerdata.get(key).get(i).reshape(1, 6).dup());
+                    totals.putRow(i + N, tetramerdata.get(key).get(i).reshape(1, 30).dup());
                     tetramerdata.get(key).get(i).getColumn(0).negi();
                     tetramerdata.get(key).get(i).getColumn(3).negi();
                 }
@@ -515,11 +533,10 @@ public class ForceField {
         }
 
         try {
-            FileUtils.write(new File(rootfolder + code + "/tetramersteps.txt"), sb2.toString(), false);
-            FileUtils.write(new File(rootfolder + code + "/tetramerforcefield.txt"), sb.toString(), false);
-            FileUtils.write(new File(rootfolder + code + "/tetramer.txt"), gson2.toJson(jftp), false);
-            FileUtils.write(new File(rootfolder + code + "/tetramerdiscarded.txt"), ds.toString(), false);
-
+            FileUtils.write(new File(rootfolder + code + "/tetramersteps.txt"), sb2.toString(), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/tetramerforcefield.txt"), sb.toString(), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/tetramer.txt"), gson2.toJson(jftp), Charset.defaultCharset(), false);
+            FileUtils.write(new File(rootfolder + code + "/tetramerdiscarded.txt"), ds.toString(), Charset.defaultCharset(), false);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -594,24 +611,14 @@ class JsonFormattedTetramerParameters {
     private double[][] stepparameters;
 
     public JsonFormattedTetramerParameters() {
-        forceconstants = new double[136][6][6];
-        stepparameters = new double[136][6];
-        for (int i = 10; i < 136; i++) {
-            forceconstants[i][0][0] = 0.0427;
-            forceconstants[i][1][1] = 0.0427;
-            forceconstants[i][2][2] = 0.0597;
-            forceconstants[i][3][3] = 50;
-            forceconstants[i][4][4] = 50;
-            forceconstants[i][5][5] = 50;
-            stepparameters[i][2] = 34.286;
-            stepparameters[i][5] = 3.4;
-        }
+        forceconstants = new double[136][30][30];
+        stepparameters = new double[136][30];
     }
 
     public void addData(int v, INDArray fc, INDArray tp0) {
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 30; i++) {
             stepparameters[v][i] = tp0.getDouble(i);
-            for (int j = 0; j < 6; j++) {
+            for (int j = 0; j < 30; j++) {
                 forceconstants[v][i][j] = fc.getDouble(i, j);
             }
         }
@@ -626,24 +633,14 @@ class JsonFormattedParameters {
     private double[][] stepparameters;
 
     public JsonFormattedParameters() {
-        forceconstants = new double[19][6][6];
-        stepparameters = new double[19][6];
-        for (int i = 10; i < 19; i++) {
-            forceconstants[i][0][0] = 0.0427;
-            forceconstants[i][1][1] = 0.0427;
-            forceconstants[i][2][2] = 0.0597;
-            forceconstants[i][3][3] = 50;
-            forceconstants[i][4][4] = 50;
-            forceconstants[i][5][5] = 50;
-            stepparameters[i][2] = 34.286;
-            stepparameters[i][5] = 3.4;
-        }
+        forceconstants = new double[10][30][30];
+        stepparameters = new double[10][30];
     }
 
     public void addData(int v, INDArray fc, INDArray tp0) {
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 30; i++) {
             stepparameters[v][i] = tp0.getDouble(i);
-            for (int j = 0; j < 6; j++) {
+            for (int j = 0; j < 30; j++) {
                 forceconstants[v][i][j] = fc.getDouble(i, j);
             }
         }

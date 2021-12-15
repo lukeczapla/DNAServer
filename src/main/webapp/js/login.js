@@ -61,8 +61,8 @@ function registered() {
 
 function signout() {
      $.ajax({
-         method: 'DELETE',
-         url: "/conf/user",
+         method: 'GET',
+         url: "/conf/user/logout",
          success: function(data) {
              console.log("logged out");
              if (google != null) google.disconnect();

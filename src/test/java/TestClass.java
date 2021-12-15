@@ -5,8 +5,14 @@
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import edu.dnatools.basepairs.BasePairParameters;
 import edu.dnatools.calculate.MCDNA;
 import edu.dnatools.utils.RefTools;
+import org.biojava.nbio.structure.Structure;
+import org.biojava.nbio.structure.StructureException;
+import org.biojava.nbio.structure.StructureIO;
+import org.biojava.nbio.structure.StructureImpl;
+import org.biojava.nbio.structure.io.PDBFileReader;
 import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -18,6 +24,11 @@ import org.nd4j.linalg.inverse.InvertMatrix;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.util.ArrayUtil;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+
 import static org.junit.Assert.*;
 import static java.lang.Math.*;
 import static java.lang.Math.cos;
@@ -163,6 +174,47 @@ public class TestClass {
     public void loadSim() {
         MCDNA mydna = MCDNA.restoreState("simulation.state");
         mydna.launch(20, 2.0f);
+    }
+
+    @Test
+    public void analyzeExample() {
+        PDBFileReader reader = new PDBFileReader();
+        Structure s;
+        try {
+            //s = StructureIO.getStructure("1e7j");
+            s = reader.getStructure(new FileInputStream("test-BDNA.pdb"));
+        } catch (IOException/*|StructureException*/ e) {
+            e.printStackTrace();
+            return;
+        }
+        BasePairParameters bp = new BasePairParameters(s);
+        bp.analyze();
+
+        double[][] phos = bp.getPhosphateParameters();
+        double[][] pairs = bp.getPairingParameters();
+        double[][] bpsteps = bp.getStepParameters();
+
+        for (int i = 0; i < bp.getLength(); i++) {
+            for (int j = 0; j < 6; j++) {
+                System.out.printf("%f ", pairs[i][j]);
+            }
+            System.out.println();
+            for (int j = 0; j < 6; j++) {
+                System.out.printf("%f ", bpsteps[i][j]);
+            }
+            System.out.println();
+            for (int j = 0; j < 6; j++) {
+                System.out.printf("%f ", phos[2*i][j]);
+            }
+            System.out.println();
+            for (int j = 0; j < 6; j++) {
+                System.out.printf("%f ", phos[2*i+1][j]);
+            }
+            System.out.println("\n\n");
+        }
+
+        System.out.println(bp);
+
     }
 
     @Test

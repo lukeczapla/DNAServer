@@ -45,7 +45,7 @@ public class BoundaryController {
     }
 
     @ApiOperation(value = "Add new BC")
-    @RequestMapping(value = "/addbc", method = RequestMethod.PUT)
+    @RequestMapping(value = "/addbc", method = RequestMethod.POST)
     @JsonView(JsonViews.BoundaryCondition.class)
     public ResponseEntity addNewBoundaryCondition(@RequestBody BoundaryCondition bc, Principal prince) {
 
@@ -87,7 +87,7 @@ public class BoundaryController {
     }
 
     @ApiOperation("Calculate the step between two reference frames")
-    @RequestMapping(value = "/calculateref", method = RequestMethod.PUT)
+    @RequestMapping(value = "/calculateref", method = RequestMethod.POST)
     public String calculateBoundaryCondition(@RequestBody String data) {
 
         double[][][] refs = gson.fromJson(data, double[][][].class);

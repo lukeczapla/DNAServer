@@ -257,7 +257,7 @@ function sendSimulation() {
             'Content-Type': 'application/json'
         },
         url: "/calculate",
-        method: "PUT",
+        method: "POST",
         data: JSON.stringify(jobdata)
     };
 

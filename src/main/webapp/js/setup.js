@@ -346,7 +346,7 @@ function deleteJobs() {
             let conBox = confirm("Are you sure you want to delete: " + $(this).html());
             if (conBox) {
                 $.ajax({url: "/delete/" + $(this).val(),
-                    method: "DELETE"})
+                    method: "GET"})
                 $(this).remove();
             }
         }
@@ -434,7 +434,7 @@ function submitJob() {
             'Content-Type': 'application/json'
         },
         url: "/submit",
-        method: "PUT",
+        method: "POST",
         data: JSON.stringify(jobdata)
     };
     $.ajax(req).done(function(response) {
@@ -469,7 +469,7 @@ function addProtein() {
                      'Content-Type': 'application/json'
                  },
                  url: "/addprotein",
-                 method: "PUT",
+                 method: "POST",
                  data: JSON.stringify(proteinData)
                };
 

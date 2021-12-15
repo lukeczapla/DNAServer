@@ -7,7 +7,7 @@ function renameProtein() {
         }
     });
     if (i == -1) return;
-    $.ajax({headers: {'Content-Type': 'text/plain'}, url: "/renameprotein/"+i, method: "PUT", data: $("#newproteinname").val()}).done(function(data) {
+    $.ajax({headers: {'Content-Type': 'text/plain'}, url: "/renameprotein/"+i, method: "POST", data: $("#newproteinname").val()}).done(function(data) {
         console.log(data);
         console.log(data.name);
         refreshData();
@@ -20,7 +20,7 @@ function deleteProteins() {
             let conBox = confirm("Are you sure you want to delete: " + $(this).html());
             if (conBox) {
                 $.ajax({url: "/deleteprotein/" + $(this).val(),
-                    method: "DELETE"});
+                    method: "GET"});
                 $(this).remove();
             }
         }
@@ -46,7 +46,7 @@ function addProtein() {
                      'Content-Type': 'application/json'
                  },
                  url: "/addprotein",
-                 method: "PUT",
+                 method: "POST",
                  data: JSON.stringify(proteinData)
                };
 

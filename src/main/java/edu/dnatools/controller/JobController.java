@@ -53,7 +53,7 @@ public class JobController {
     private static Gson gson = new GsonBuilder().create();
 
     @ApiOperation(value = "Test the Java simulation backend")
-    @RequestMapping(value = "/calculate", method = RequestMethod.PUT)
+    @RequestMapping(value = "/calculate", method = RequestMethod.POST)
     @JsonView({JsonViews.JobInput.class})
     public String testCalculation(@RequestBody JobInput input, Principal prince) {
         MCDNA mydna = new MCDNA(input.getSequence(), input.getStepList(), input.getForceConstants(),
@@ -63,7 +63,7 @@ public class JobController {
     }
 
     @ApiOperation(value = "Submit a calculation", response = Job.class, responseContainer = "List", notes = "Large data set sent")
-    @RequestMapping(value = "/submit", method = RequestMethod.PUT)
+    @RequestMapping(value = "/submit", method = RequestMethod.POST)
     @JsonView({JsonViews.JobInput.class, JsonViews.Job.class})
     public ResponseEntity processJob(@RequestBody JobInput input, Principal prince) {
         log.debug(input.getForceConstants());
@@ -118,7 +118,7 @@ public class JobController {
     }
 
     @ApiOperation(value = "Delete one of the jobs for the current user")
-    @RequestMapping(value = "/delete/{id}", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
     public ResponseEntity deleteJob(@PathVariable("id") Long id, Principal prince) {
         if (prince == null) return null;
         Job job = jobService.getOne(id);

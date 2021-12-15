@@ -14,6 +14,7 @@
 	        <biojava.version>5.0.0</biojava.version>
             <nd4j.backend>nd4j-native</nd4j.backend>
             <nd4j.version>0.9.0</nd4j.version>
+            <springboot.version>2.4.2</springboot.version>
         </properties>
 
         <parent>
@@ -38,6 +39,7 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-web</artifactId>
+                <version>${springboot.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.springframework.boot</groupId>
@@ -46,8 +48,14 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.20</version>
+            </dependency>
+            <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-security</artifactId>
+                <version>${springboot.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.springframework.boot</groupId>
@@ -58,10 +66,12 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-data-jpa</artifactId>
+                <version>${springboot.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-actuator</artifactId>
+                <version>${springboot.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.springframework.boot</groupId>
@@ -72,10 +82,12 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-aop</artifactId>
+                <version>${springboot.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-tomcat</artifactId>
+                <version>${springboot.version}</version>
             </dependency>
             <dependency>
                 <groupId>mysql</groupId>
@@ -109,7 +121,6 @@
                 <artifactId>commons-io</artifactId>
                 <version>2.7</version>
             </dependency>
-
             <dependency>
                 <groupId>org.nd4j</groupId>
                 <artifactId>${nd4j.backend}</artifactId>
@@ -151,4 +162,13 @@
                 <scope>test</scope> 
             </dependency>
         </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${springboot.version}</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
