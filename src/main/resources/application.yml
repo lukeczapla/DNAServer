@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:mysql://localhost/simdb?useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    username: root
-    password: thecure7
+    username: CHANGEME
+    password: CHANGEME
     driverClassName: com.mysql.cj.jdbc.Driver
     continueOnError: true
     testOnBorrow: true
@@ -21,7 +21,7 @@ server:
       timeout: 0
 
 google:
-  clientId: 613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com
-  clientSecret: blank
+  clientId: CHANGEME
+  clientSecret: canbeleftblank
 
 

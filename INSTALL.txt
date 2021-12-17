@@ -1,20 +1,19 @@
 
-DNA Simulation and Analysis Workbench - a collaboration between The Frisch School and Rutgers University, (c)2017 Luke Czapla and licensed under GPL (version 3).  Libraries included are under compatible MIT and Apache licenses and belong to their respective authors.  Workbench Author: luke.czapla@frisch.org luke.czapla@rutgers.edu
+DNA Simulation and Analysis Workbench - a collaboration with Rutgers University, (c)2017-2021 Luke Czapla and licensed under GPL (version 3).  Libraries included are under compatible MIT and Apache licenses and belong to their respective authors.  Workbench Author: luke.czapla@rutgers.edu czaplal@mskcc.org
 
-REQUIREMENTS: Java 8, Maven, X3DNA, SQL (MySQL is configured in src/main/resources/application.yml file), gcc and g++ or similar C/C++ compiler (clang)
+REQUIREMENTS: Java 8+, Maven, SQL (MySQL is configured in src/main/resources/application.yml file), gcc and g++ or similar C/C++ compiler (clang)
 
 To install (via terminal/command prompt)
 
-Make sure you have Maven and Java 8 installed.  Also, gcc is used to compile the simulation code.  You can change that in the mcsrc/Makefile though.  This software is compatible with both MacOS X and Linux, and could possibly be run in Windows with Cygwin, but it has not been tested.
+Make sure you have Maven and Java 8+ installed, Java 15 has been tested with all routines.  Also, gcc is used to compile the simulation code.  You can change that in the mcsrc/Makefile though.
+This software is compatible with both MacOS X and Linux, and can also be run in Windows, i.e., with Powershell and the appropriate Java compiler and Maven.
 
-Make sure that X3DNA is installed and that your X3DNA environment variable points to the main folder of the X3DNA installation.
-
-Go into the mcsrc folder and type this:
+For C++ simulations, go into the mcsrc folder and type this to install the binaries needed to run these simulations:
 
 make
 
-
-Then, make sure that you have MySQL installed.  Create a database schema called simdb.  Edit the src/main/resources/application.yml file in this project to enter your Google app client ID and secret, also the username and password that has rights the edit the database.
+Then, make sure that you have MySQL installed.  Create a database schema called simdb for the default settings in application.yml.
+Edit the src/main/resources/application.yml file in this project to enter your Google app client ID and secret, also the username and password that has rights the edit the database.
 
 Typical MySQL command to create relevant database:
 CREATE SCHEMA simdb;
@@ -24,11 +23,13 @@ From the main folder where this install document is found, type this:
 mvn spring-boot:run
 
 
-That is it.  The Spring Framework will create the tables that store the data.  Point your web browser to http://localhost:8080 and you are ready to go.  You must log in via a gmail account, the server uses OAuth2 to validate the user.
+That is it.  The Spring Framework will create the tables that store the data.  Point your web browser to http://localhost:8081 and you are ready to go.
+You must log in via a gmail account, the server uses OAuth2 to validate the user.
 
-Application settings are in the src/main/resources/application.yml.  You may have to change the values of the database resources for JPA (by default it uses MySQL with account root with no password, which is a default setting on Mac if mysql is installed with homebrew; on Ubuntu and other Linux versions you may have to change the settings in the application.yml or in mysql) and register your own Google API key, but it will work on the localhost on port 8080 with the one provided.
-
-
+Application settings are in the src/main/resources/application.yml.
+You may have to change the values of the database resources for JPA (by default it uses MySQL with account root with no password, which is a default setting on Mac if mysql is installed with homebrew;
+on Ubuntu and other Linux versions you may have to change the settings in the application.yml or in mysql) and register your own Google API key,
+but it will work on the localhost on port 8080 with the one provided.
 
 TO UPDATE THE SYSTEM:
 
