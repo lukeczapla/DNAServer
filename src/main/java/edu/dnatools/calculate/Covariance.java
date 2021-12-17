@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Covariance {
 
-    private static Logger log = LoggerFactory.getLogger(Covariance.class);
+    private static final Logger log = LoggerFactory.getLogger(Covariance.class);
 
     public static INDArray mpow(INDArray in, int n, boolean inplace) {
         assert in.rows() == in.columns();

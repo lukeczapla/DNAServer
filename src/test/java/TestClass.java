@@ -1,6 +1,6 @@
-/**
- * Created by luke on 7/3/17.
- */
+/*
+ * Created by luke on 7/3/17 modified 12/16/21.
+ * */
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -17,6 +17,7 @@ import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.accum.distances.EuclideanDistance;
+import org.nd4j.linalg.dimensionalityreduction.PCA;
 import org.nd4j.linalg.eigen.Eigen;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -25,9 +26,8 @@ import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.util.ArrayUtil;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static java.lang.Math.*;
@@ -174,6 +174,67 @@ public class TestClass {
     public void loadSim() {
         MCDNA mydna = MCDNA.restoreState("simulation.state");
         mydna.launch(20, 2.0f);
+    }
+
+    @Test
+    public void writeMaddocks() {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        try {
+            Scanner scan = new Scanner(new FileInputStream("ordering.txt"));
+            List<String> tetramers = new ArrayList<>();
+            Map<String, INDArray> tetramerMeans = new LinkedHashMap<>();
+            Map<String, INDArray> tetramerCov = new LinkedHashMap<>();
+            for (int i = 0; i < 136; i++) {
+                String tetramer = scan.nextLine();
+                tetramers.add(tetramer);
+                tetramerMeans.put(tetramer, Nd4j.create(1, 30));
+                tetramerCov.put(tetramer, Nd4j.create(30, 30));
+            }
+            Gson gson = new Gson();
+            scan = new Scanner(new FileInputStream("jmtetramers.txt"));
+            for (int i = 0; i < 136; i++) {
+                String tetramer = scan.next();
+                boolean reverse = false;
+                if (!tetramers.contains(tetramer)) {
+                    tetramer = BasePairParameters.complement(tetramer, false);
+                    reverse = true;
+                }
+                int steps = Integer.parseInt(scan.next());
+                System.out.println(tetramer + " " + steps);
+                INDArray dataset = Nd4j.create(steps, 30);
+                scan.nextLine();
+                for (int j = 0; j < steps; j++) {
+                    String array = scan.nextLine();
+                    double[] step = gson.fromJson(array, double[].class);
+                    if (reverse) step = BasePairParameters.reversePacking(step);
+                    for (int k = 0; k < 30; k++) dataset.getRow(j).getColumn(k).assign(step[k]);
+                }
+                scan.nextLine(); // blank line!
+                PCA myPCA = new PCA(dataset);
+                tetramerMeans.put(tetramer, myPCA.getMean());
+                tetramerCov.put(tetramer, myPCA.getCovarianceMatrix());
+            }
+            PrintWriter out = new PrintWriter(new FileOutputStream("means.txt"));
+            PrintWriter out2 = new PrintWriter(new FileOutputStream("covariances.txt"));
+            for (String tetramer : tetramers) {
+                INDArray mean = tetramerMeans.get(tetramer);
+                out.print(tetramer);
+                for (int i = 0; i < 30; i++) out.printf(" %f", mean.getDouble(i));
+                out.println();
+                INDArray cov = tetramerCov.get(tetramer);
+                for (int i = 0; i < 30; i++) {
+                    out2.print(tetramer);
+                    for (int j = 0; j < 30; j++) {
+                        out2.printf(" %f", cov.getRow(i).getDouble(j));
+                    }
+                    out2.println();
+                }
+            }
+            out.close();
+            out2.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test

@@ -59,6 +59,7 @@ public class NDDNA implements Serializable {
     protected int[] proteinPositions;
 
     public NDDNA(String sequence, String stepList, String forceConstants, String stepParameters, String proteinList, ProteinService proteinService) {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
         this.sequence = sequence.toUpperCase();
         this.nsteps = sequence.length()-1;
         this.occupied = new boolean[nsteps];
@@ -66,7 +67,7 @@ public class NDDNA implements Serializable {
         this.forceConstants = gson.fromJson(forceConstants, double[][][].class);
         this.stepParameters = gson.fromJson(stepParameters, double[][].class);
         this.proteinList = gson.fromJson(proteinList, long[][].class);
-        steps = Nd4j.create(new float[nsteps*6], new int[] {nsteps, 6});
+        steps = Nd4j.create(new double[nsteps*6], new int[] {nsteps, 6});
 
         if (this.proteinList.length > 0) {
             proteins = new Protein[this.proteinList.length];
@@ -113,22 +114,22 @@ public class NDDNA implements Serializable {
 
 
     protected void setupSteps() {
-        float[][][] fci = new float[nsteps][6][6];
-        float[][] tpi = new float[nsteps][6];
+        double[][][] fci = new double[nsteps][6][6];
+        double[][] tpi = new double[nsteps][6];
         for (int i = 0; i < nsteps; i++) {
             String step = ""+sequence.charAt(i)+sequence.charAt(i+1);
             for (int j = 0; j < stepParameters.length; j++) {
                 if (step.equals(stepList[j])) {
                     for (int k = 0; k < 6; k++) {
-                        tpi[i][k] = (float)stepParameters[j][k];
-                        for (int l = 0; l < 6; l++) fci[i][k][l] = (float)forceConstants[j][k][l];
+                        tpi[i][k] = (double)stepParameters[j][k];
+                        for (int l = 0; l < 6; l++) fci[i][k][l] = (double)forceConstants[j][k][l];
                     }
                 }
             }
         }
-        float[] flat = ArrayUtil.flattenFloatArray(fci);
+        double[] flat = ArrayUtil.flattenDoubleArray(fci);
         FGH = Nd4j.create(flat, new int[] {nsteps, 6, 6});
-        flat = ArrayUtil.flattenFloatArray(tpi);
+        flat = ArrayUtil.flattenDoubleArray(tpi);
         tp0 = Nd4j.create(flat, new int[] {nsteps, 1, 6});
         for (int i = 0; i < nsteps; i++) {
             IComplexNDArray[] eigenvectors = Eigen.eigenvectors(FGH.slice(i));
@@ -156,7 +157,7 @@ public class NDDNA implements Serializable {
 // just using structure 0 for now.
             String[] dat0 = dats[0].split("\\r?\\n");
             int npsteps = Integer.parseInt(dat0[0]);
-            p[i].steps = Nd4j.create(new float[npsteps*6], new int[] {npsteps, 6});
+            p[i].steps = Nd4j.create(new double[npsteps*6], new int[] {npsteps, 6});
             for (int j = 0; j < npsteps; j++) {
                 String[] spars = dat0[j+1].split("\\s+");
                 for (int k = 0; k < 6; k++)
@@ -188,16 +189,16 @@ public class NDDNA implements Serializable {
                         //log.debug("Atom " + atomname + " of " + resname + " at " + x + " " + y + " " + z);
                     }
                 }
-                p[i].CApositions = Nd4j.create(new float[CApositions.size()*4], new int[] {CApositions.size(), 4});
+                p[i].CApositions = Nd4j.create(new double[CApositions.size()*4], new int[] {CApositions.size(), 4});
                 p[i].CApositions.getColumn(3).assign(1.0);
-                p[i].proteinCharge = Nd4j.create(new float[CApositions.size()], new int[] {CApositions.size()});
+                p[i].proteinCharge = Nd4j.create(new double[CApositions.size()], new int[] {CApositions.size()});
                 for (int k = 0; k < CApositions.size(); k++) {
                     p[i].CApositions.getRow(k).getColumn(0).assign(CApositions.get(k).getX());
                     p[i].CApositions.getRow(k).getColumn(1).assign(CApositions.get(k).getY());
                     p[i].CApositions.getRow(k).getColumn(2).assign(CApositions.get(k).getZ());
                     p[i].proteinCharge.getColumn(k).assign(ProteinRecord.assignCharge(p[i].CAresidue.get(k)));
                 }
-                p[i].allpositions = Nd4j.create(new float[allpositions.size()*4], new int[] {allpositions.size(), 4});
+                p[i].allpositions = Nd4j.create(new double[allpositions.size()*4], new int[] {allpositions.size(), 4});
                 p[i].allpositions.getColumn(3).assign(1.0);
                 for (int k = 0; k < allpositions.size(); k++) {
                     p[i].allpositions.getRow(k).getColumn(0).assign(allpositions.get(k).getX());
@@ -314,7 +315,8 @@ public class NDDNA implements Serializable {
 */
 
     public static INDArray calculateA(INDArray stepdata) {
-        INDArray result = Nd4j.create(new float[stepdata.rows()*16], new int[] {stepdata.rows(), 16}, 'r');
+        INDArray result = Nd4j.eye(4);
+        if (stepdata.rows() > 1) Nd4j.create(new double[stepdata.rows()*16], new int[] {stepdata.rows(), 16}, 'r');
         INDArray t1 = stepdata.getColumn(0).mul(Math.PI/180.0);
         INDArray t2 = stepdata.getColumn(1).mul(Math.PI/180.0);
         INDArray t3 = stepdata.getColumn(2).mul(Math.PI/180.0);
@@ -329,17 +331,32 @@ public class NDDNA implements Serializable {
         INDArray cm = Transforms.cos(t3.div(2.0).subi(phi));
         INDArray sg = Transforms.sin(gamma.dup());
         INDArray cg = Transforms.cos(gamma.dup());
-        result.getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
-        result.getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
-        result.getColumn(2).assign(cm.mul(sg));
 
-        result.getColumn(4).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
-        result.getColumn(5).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
-        result.getColumn(6).assign(sm.mul(sg));
+        if (stepdata.rows() > 1) {
+            result.getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
+            result.getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
+            result.getColumn(2).assign(cm.mul(sg));
 
-        result.getColumn(8).assign(sg.neg().muli(cp));
-        result.getColumn(9).assign(sg.mul(sp));
-        result.getColumn(10).assign(cg);
+            result.getColumn(4).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
+            result.getColumn(5).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
+            result.getColumn(6).assign(sm.mul(sg));
+
+            result.getColumn(8).assign(sg.neg().muli(cp));
+            result.getColumn(9).assign(sg.mul(sp));
+            result.getColumn(10).assign(cg);
+        } else {
+            result.getRow(0).getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
+            result.getRow(0).getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
+            result.getRow(0).getColumn(2).assign(cm.mul(sg));
+
+            result.getRow(1).getColumn(0).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
+            result.getRow(1).getColumn(1).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
+            result.getRow(1).getColumn(2).assign(sm.mul(sg));
+
+            result.getRow(2).getColumn(0).assign(sg.neg().muli(cp));
+            result.getRow(2).getColumn(1).assign(sg.mul(sp));
+            result.getRow(2).getColumn(2).assign(cg);
+        }
 
         sp = Transforms.sin(phi.dup());
         cp = Transforms.cos(phi.dup());
@@ -350,25 +367,37 @@ public class NDDNA implements Serializable {
         INDArray t5 = stepdata.getColumn(4);
         INDArray t6 = stepdata.getColumn(5);
 
-        result.getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
-                .addi(t5.mul(cm.mul(cg).muli(sp).negi().subi(sm.mul(cp))))
-                .addi(t6.mul(cm).muli(sg)));
-        result.getColumn(7).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
-                .addi(t5.mul(sm.mul(cg).muli(sp).negi().addi(cm.mul(cp))))
-                .addi(t6.mul(sm).muli(sg)));
-        result.getColumn(11).assign(t4.mul(sg.mul(cp).negi())
-                .addi(t5.mul(sg).muli(sp))
-                .addi(t6.mul(cg)));
+        if (stepdata.rows() > 1) {
+            result.getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
+                    .addi(t5.mul(cm.mul(cg).muli(sp).negi().subi(sm.mul(cp))))
+                    .addi(t6.mul(cm).muli(sg)));
+            result.getColumn(7).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
+                    .addi(t5.mul(sm.mul(cg).muli(sp).negi().addi(cm.mul(cp))))
+                    .addi(t6.mul(sm).muli(sg)));
+            result.getColumn(11).assign(t4.mul(sg.mul(cp).negi())
+                    .addi(t5.mul(sg).muli(sp))
+                    .addi(t6.mul(cg)));
+            result.getColumn(15).assign(1.0);
+        } else {
+            result.getRow(0).getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
+                    .addi(t5.mul(cm.mul(cg).muli(sp).negi().subi(sm.mul(cp))))
+                    .addi(t6.mul(cm).muli(sg)));
+            result.getRow(1).getColumn(3).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
+                    .addi(t5.mul(sm.mul(cg).muli(sp).negi().addi(cm.mul(cp))))
+                    .addi(t6.mul(sm).muli(sg)));
+            result.getRow(2).getColumn(3).assign(t4.mul(sg.mul(cp).negi())
+                    .addi(t5.mul(sg).muli(sp))
+                    .addi(t6.mul(cg)));
+        }
 
-        result.getColumn(15).assign(1.0);
+        if (stepdata.rows() > 1) result.reshape(stepdata.rows(), 4, 4);
 
-        INDArray r = result.reshape(stepdata.rows(), 4, 4);
-
-        return r;
+        return result;
     }
 
+    // only for a single stepdata matrix that's 1x6!
     public static INDArray calculateM(INDArray stepdata) {
-        INDArray result = Nd4j.create(new float[stepdata.rows()*16], new int[] {stepdata.rows(), 16}, 'r');
+        INDArray result = Nd4j.eye(4);
         INDArray t1 = stepdata.getColumn(0).mul(Math.PI/180.0);
         INDArray t2 = stepdata.getColumn(1).mul(Math.PI/180.0);
         INDArray t3 = stepdata.getColumn(2).mul(Math.PI/180.0);
@@ -384,17 +413,17 @@ public class NDDNA implements Serializable {
         INDArray sg = Transforms.sin(gamma.dup());
         INDArray cg = Transforms.cos(gamma.dup());
 
-        result.getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
-        result.getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
-        result.getColumn(2).assign(cm.mul(sg));
+        result.getRow(0).getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
+        result.getRow(0).getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
+        result.getRow(0).getColumn(2).assign(cm.mul(sg));
 
-        result.getColumn(4).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
-        result.getColumn(5).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
-        result.getColumn(6).assign(sm.mul(sg));
+        result.getRow(1).getColumn(0).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
+        result.getRow(1).getColumn(1).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
+        result.getRow(1).getColumn(2).assign(sm.mul(sg));
 
-        result.getColumn(8).assign(sg.neg().muli(cp));
-        result.getColumn(9).assign(sg.mul(sp));
-        result.getColumn(10).assign(cg);
+        result.getRow(2).getColumn(0).assign(sg.neg().muli(cp));
+        result.getRow(2).getColumn(1).assign(sg.mul(sp));
+        result.getRow(2).getColumn(2).assign(cg);
 
         sp = Transforms.sin(phi.dup());
         cp = Transforms.cos(phi.dup());
@@ -405,21 +434,17 @@ public class NDDNA implements Serializable {
         INDArray t5 = stepdata.getColumn(4);
         INDArray t6 = stepdata.getColumn(5);
 
-        result.getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
+        result.getRow(0).getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
                 .addi(t5.mul(cm.mul(cg).muli(sp).negi().subi(sm.mul(cp))))
                 .addi(t6.mul(cm).muli(sg)));
-        result.getColumn(7).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
+        result.getRow(1).getColumn(3).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
                 .addi(t5.mul(sm.mul(cg).muli(sp).negi().addi(cm.mul(cp))))
                 .addi(t6.mul(sm).muli(sg)));
-        result.getColumn(11).assign(t4.mul(sg.mul(cp).negi())
+        result.getRow(2).getColumn(3).assign(t4.mul(sg.mul(cp).negi())
                 .addi(t5.mul(sg).muli(sp))
                 .addi(t6.mul(cg)));
 
-        result.getColumn(15).assign(1.0);
-
-        INDArray r = result.reshape(stepdata.rows(), 4, 4);
-
-        return r;
+        return result;
     }
 
     public static INDArray calculatetp(INDArray A) {
@@ -481,7 +506,6 @@ public class NDDNA implements Serializable {
      * @return the 4x4 reference frame matrix
      */
     public static INDArray calculateFra(INDArray ic) {
-        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
         double uscale = 5.0;
 
         INDArray result = Nd4j.eye(4);
@@ -595,7 +619,6 @@ public class NDDNA implements Serializable {
         INDArray upuu = uvec.add(uvec.mmul(uvec));
 
         INDArray Qhalf = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
-
         return Qhalf;
     }
 
@@ -605,7 +628,6 @@ public class NDDNA implements Serializable {
      * @return Internal cgDNA coordinates in a 6x1 matrix
      */
     public static INDArray calculateIc(INDArray fra) {
-        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
         double uscale = 5.0;
         double trace = fra.getDouble(0,0) + fra.getDouble(1,1) + fra.getDouble(2,2);
 
@@ -664,7 +686,6 @@ public class NDDNA implements Serializable {
      * @return Internal cgDNA coordinates in a 6x1 matrix
      */
     public static INDArray calculateIcPho(INDArray fra) {
-        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
         double uscale = 5.0;
         double trace = fra.getDouble(0,0) + fra.getDouble(1,1) + fra.getDouble(2,2);
 

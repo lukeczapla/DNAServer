@@ -13,8 +13,9 @@ import java.io.*;
  */
 public class MCDNA extends NDDNA implements Serializable, MonteCarloEngine {
 
+    @Serial
     private static final long serialVersionUID = 621L;
-    public static Logger log = LoggerFactory.getLogger(MCDNA.class);
+    public static final Logger log = LoggerFactory.getLogger(MCDNA.class);
 
     private INDArray newA, newsteps, newrefs;
     private float oldEnergy, newEnergy;

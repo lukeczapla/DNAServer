@@ -12,6 +12,7 @@ import edu.dnatools.basepairs.BasePairParameters;
 import org.biojava.nbio.structure.ecod.EcodDatabase;
 import org.biojava.nbio.structure.ecod.EcodDomain;
 import org.biojava.nbio.structure.ecod.EcodFactory;
+import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dimensionalityreduction.PCA;
 import org.nd4j.linalg.factory.Nd4j;
@@ -70,6 +71,7 @@ public class ForceField {
                 tetramers = tetramers.replace("U", "T");
             }
             String[] pdb = pdblist.split("\\s+");
+            Nd4j.setDataType(DataBuffer.Type.DOUBLE);
 
             List<String> stepSet = Arrays.asList(WCsteps.split("\\s+"));
             List<String> tetramerSet = Arrays.asList(tetramers.split("\\s+"));
@@ -433,6 +435,7 @@ public class ForceField {
 
             INDArray culledArray = null;
             if (input.getCullEigen() != null && input.getCullEigen()) {
+                log.info("USING EIGENVECTOR/VALUE DEVIATION REDUCTION FOR SYSTEM");
                 culledArray = cullEigen(totals, 3.0, ds);
                 for (int j = 0; j < 9; j++)
                     culledArray = cullEigen(culledArray, 3.0, ds);
@@ -487,7 +490,7 @@ public class ForceField {
             FileUtils.write(new File(rootfolder + code + "/forcefield.txt"), sb.toString(), Charset.defaultCharset(), false);
             FileUtils.write(new File(rootfolder + code + "/pdna.txt"), gson2.toJson(jfp), Charset.defaultCharset(), false);
             FileUtils.write(new File(rootfolder + code + "/discarded.txt"), ds.toString(), Charset.defaultCharset(), false);
-
+            FileUtils.write(new File(rootfolder + code + "/jmdimers.txt"), jm.toString(), Charset.defaultCharset(), false);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -574,7 +577,6 @@ public class ForceField {
             FileUtils.write(new File(rootfolder + code + "/tetramerforcefield.txt"), sb.toString(), Charset.defaultCharset(), false);
             FileUtils.write(new File(rootfolder + code + "/tetramer.txt"), gson2.toJson(jftp), Charset.defaultCharset(), false);
             FileUtils.write(new File(rootfolder + code + "/tetramerdiscarded.txt"), ds.toString(), Charset.defaultCharset(), false);
-            FileUtils.write(new File(rootfolder + code + "/jmdimers.txt"), jm.toString(), Charset.defaultCharset(), false);
             FileUtils.write(new File(rootfolder + code + "/jmtetramers.txt"), jm2.toString(), Charset.defaultCharset(), false);
         } catch (IOException e) {
             e.printStackTrace();
@@ -624,31 +626,30 @@ public class ForceField {
         public INDArray[] frames() {
             INDArray[] result = new INDArray[8];
             result[0] = Nd4j.eye(4); // bp #1
-            INDArray pair1 = value.get(NDArrayIndex.interval(0,6)).reshape(1,6);
-            INDArray midbasis = NDDNA.calculateM(pair1);
-            INDArray baseC = result[0].mmul(InvertMatrix.invert(midbasis, false));
+            INDArray pair1 = value.get(NDArrayIndex.interval(0,6)).dup().reshape(1,6);
+            INDArray midbasis = NDDNA.calculateM(pair1.dup());
+            INDArray baseC = result[0].dup().mmul(InvertMatrix.invert(midbasis, false));
             result[1] = baseC.dup();        // Crick base #1
-            result[2] = baseC.mmul(NDDNA.calculateA(pair1));        // Watson base #1
-            result[3] = result[2].mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(6,12)).reshape(1,6)));   // phosphate #1
-            result[4] = result[0].mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(12,18)).reshape(1,6)));  // bp plane #2
-            INDArray pair2 = value.get(NDArrayIndex.interval(24, 30)).reshape(1,6);
-
-            midbasis = NDDNA.calculateM(pair2);
-            INDArray baseC2 = result[4].mmul(InvertMatrix.invert(midbasis, false));
+            result[2] = baseC.dup().mmul(NDDNA.calculateA(pair1));        // Watson base #1
+            result[3] = result[2].mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(6,12)).dup().reshape(1,6)));   // phosphate #1
+            result[4] = result[0].mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(12,18)).dup().reshape(1,6)));  // bp plane #2
+            INDArray pair2 = value.get(NDArrayIndex.interval(24, 30)).dup().reshape(1,6);
+            midbasis = NDDNA.calculateM(pair2.dup());
+            INDArray baseC2 = result[4].dup().mmul(InvertMatrix.invert(midbasis, false));
             result[5] = baseC2.dup();           // Crick base #2
-            result[6] = result[5].mmul(NDDNA.calculateA(pair2));            // Watson base #2
-            result[7] = baseC2.mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(18, 24))));   // phosphate #2
+            result[6] = result[5].mmul(NDDNA.calculateA(pair2.dup()));            // Watson base #2
+            result[7] = baseC2.mmul(NDDNA.calculateA(value.get(NDArrayIndex.interval(18, 24)).dup().reshape(1,6)));   // phosphate #2
             return result;
         }
 
         // John Maddocks lab internal coordinate values
         public INDArray ic30() {
             INDArray[] frames = frames();
-            INDArray pair1 = NDDNA.calculateIc(frames[1].mmul(frames[2]));
-            INDArray pho1 = NDDNA.calculateIcPho(frames[2].mmul(frames[3]));
-            INDArray bp = NDDNA.calculateIc(frames[0].mmul(frames[4]));
-            INDArray pho2 = NDDNA.calculateIcPho(frames[5].mmul(frames[7]));
-            INDArray pair2 = NDDNA.calculateIc(frames[5].mmul(frames[6]));
+            INDArray pair1 = NDDNA.calculateIc(InvertMatrix.invert(frames[1], false).mmul(frames[2]));
+            INDArray pho1 = NDDNA.calculateIcPho(InvertMatrix.invert(frames[2], false).mmul(frames[3]));
+            INDArray bp = NDDNA.calculateIc(InvertMatrix.invert(frames[0], false).mmul(frames[4]));
+            INDArray pho2 = NDDNA.calculateIcPho(InvertMatrix.invert(frames[5], false).mmul(frames[7]));
+            INDArray pair2 = NDDNA.calculateIc(InvertMatrix.invert(frames[5], false).mmul(frames[6]));
             INDArray result = Nd4j.create(1, 30);
             for (int i = 0; i < 6; i++) {
                 result.getColumn(i).assign(pair1.getDouble(i));

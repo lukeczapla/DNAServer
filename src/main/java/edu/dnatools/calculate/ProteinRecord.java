@@ -35,6 +35,7 @@ public class ProteinRecord implements Serializable {
 
     public static int assignCharge(String resName) {
         if (resName.equals("LYS") || resName.equals("ARG")) return +1;
+        //else if (resName.equals("GLU") || resName.equals("ASP")) return -1;
         else return 0;
     }
 
