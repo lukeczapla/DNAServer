@@ -36,6 +36,7 @@ import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.*;
 
@@ -60,8 +61,9 @@ import static java.lang.Math.*;
  */
 public class BasePairParameters implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 6214502385L;
-    private static Logger log = LoggerFactory.getLogger(BasePairParameters.class);
+    private static final Logger log = LoggerFactory.getLogger(BasePairParameters.class);
 
     // See URL http://ndbserver.rutgers.edu/ndbmodule/archives/reports/tsukuba/Table1.html
     // and the paper cited at the top of this class (also as Table 1).
@@ -581,7 +583,7 @@ Returns 4x4 matrix reference frame for a single base
         return result;
     }
 
-    public double[] reversePacking(double[] data) {
+    public static double[] reversePacking(double[] data) {
         double[] result = new double[30];
 
         for (int i = 0; i < 6; i++) {
@@ -617,7 +619,44 @@ Returns 4x4 matrix reference frame for a single base
     }
 
 
-    // The following methods are just helper classes for the rapid analyze of base-pair geometry.
+    // The following methods are just helper classes for the rapid analysis of base-pair geometry.
+    public static Matrix4d calculateA(double[] tp) {
+        Matrix4d M = new Matrix4d();
+        M.setIdentity();
+        double t1 = tp[0]*PI/180.0;
+        double t2 = tp[1]*PI/180.0;
+        double t3 = tp[2]*PI/180.0;
+
+        double gamma = sqrt(t1*t1+t2*t2);
+        double phi = Math.atan2(t1,t2);
+        double omega = t3;
+
+        double sp = Math.sin(omega/2.0 + phi);
+        double cp = Math.cos(omega/2.0 + phi);
+        double sm = Math.sin(omega/2.0 - phi);
+        double cm = Math.cos(omega/2.0 - phi);
+        double sg = Math.sin(gamma);
+        double cg = Math.cos(gamma);
+
+        M.setElement(0, 0, cm*cg*cp-sm*sp);
+        M.setElement(0, 1, -cm*cg*sp-sm*cp);
+        M.setElement(0, 2, cm*sg);
+        M.setElement(1, 0, sm*cg*cp+cm*sp);
+        M.setElement(1, 1, -sm*cg*sp+cm*cp);
+        M.setElement(1, 2, sm*sg);
+        M.setElement(2, 0, -sg*cp);
+        M.setElement(2, 1, sg*sp);
+        M.setElement(2, 2, cg);
+
+        sp = Math.sin(phi); cp = Math.cos(phi); sg = Math.sin(gamma/2.0); cg = Math.cos(gamma/2.0);
+
+        M.setElement(0, 3, (tp[3]*(cm*cg*cp-sm*sp) + tp[4]*(-cm*cg*sp-sm*cp) + tp[5]*(cm*sg))/2.0);
+        M.setElement(1, 3, (tp[3]*(sm*cg*cp+cm*sp) + tp[4]*(-sm*cg*sp+cm*cp) + tp[5]*(sm*sg))/2.0);
+        M.setElement(2, 3, (tp[3]*(-sg*cp) + tp[4]*(sg*sp) + tp[5]*(cg))/2.0);
+
+        return M;
+
+    }
 
     public static Matrix4d calculateM(double[] tp) {
         Matrix4d M = new Matrix4d();

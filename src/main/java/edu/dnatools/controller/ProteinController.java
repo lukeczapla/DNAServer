@@ -28,7 +28,7 @@ import java.util.List;
 @Api("Get and set proteins in the database, also structures for visualization")
 public class ProteinController {
 
-    private static Logger log = LoggerFactory.getLogger(ProteinController.class);
+    private static final Logger log = LoggerFactory.getLogger(ProteinController.class);
 
     @Autowired
     private ProteinService proteinService;
@@ -39,11 +39,11 @@ public class ProteinController {
     @ApiOperation("Add a new protein to the database")
     @RequestMapping(value = "/addprotein", method = RequestMethod.POST)
     @JsonView(JsonViews.Protein.class)
-    public ResponseEntity addProtein(@RequestBody Protein protein, Principal prince) {
+    public ResponseEntity<String> addProtein(@RequestBody Protein protein, Principal prince) {
         Protein result = proteinService.add(protein);
         //log.info(protein.getDats());
-        if (result != null) return new ResponseEntity("OK", HttpStatus.OK);
-        return new ResponseEntity("Already exists", HttpStatus.BAD_REQUEST);
+        if (result != null) return new ResponseEntity<>("OK", HttpStatus.OK);
+        return new ResponseEntity<>("Already exists", HttpStatus.BAD_REQUEST);
     }
 
     @ApiOperation("Delete a protein from the database")
@@ -101,11 +101,11 @@ public class ProteinController {
     @ApiOperation("Add a new protein to the database")
     @RequestMapping(value = "/addstructure", method = RequestMethod.POST)
     @JsonView(JsonViews.ProteinStructure.class)
-    public ResponseEntity addProteinStructure(@RequestBody ProteinStructure protein, Principal prince) {
+    public ResponseEntity<String> addProteinStructure(@RequestBody ProteinStructure protein, Principal prince) {
         ProteinStructure result = proteinStructureService.add(protein);
         //log.info(protein.getDats());
-        if (result != null) return new ResponseEntity("OK", HttpStatus.OK);
-        return new ResponseEntity("Already exists", HttpStatus.BAD_REQUEST);
+        if (result != null) return new ResponseEntity<>("OK", HttpStatus.OK);
+        return new ResponseEntity<>("Already exists", HttpStatus.BAD_REQUEST);
     }
 
 }

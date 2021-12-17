@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.dnatools.model.Protein;
 import edu.dnatools.service.ProteinService;
+import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.complex.IComplexNDArray;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.accum.distances.EuclideanDistance;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.Transient;
+import javax.vecmath.Matrix4d;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -365,6 +367,60 @@ public class NDDNA implements Serializable {
         return r;
     }
 
+    public static INDArray calculateM(INDArray stepdata) {
+        INDArray result = Nd4j.create(new float[stepdata.rows()*16], new int[] {stepdata.rows(), 16}, 'r');
+        INDArray t1 = stepdata.getColumn(0).mul(Math.PI/180.0);
+        INDArray t2 = stepdata.getColumn(1).mul(Math.PI/180.0);
+        INDArray t3 = stepdata.getColumn(2).mul(Math.PI/180.0);
+        INDArray gamma = Transforms.sqrt(t1.mul(t1).addi(t2.mul(t2))).mul(0.5);
+// THIS LINE NEEDED ATAN2()
+        //       INDArray phi = Transforms.atan(t1.div(t2), false);
+        INDArray phi = Transforms.atan2(t2, t1);
+
+        INDArray sp = Transforms.sin(phi);
+        INDArray cp = Transforms.cos(phi);
+        INDArray sm = Transforms.sin(t3.div(2.0).subi(phi));
+        INDArray cm = Transforms.cos(t3.div(2.0).subi(phi));
+        INDArray sg = Transforms.sin(gamma.dup());
+        INDArray cg = Transforms.cos(gamma.dup());
+
+        result.getColumn(0).assign(cm.mul(cg).muli(cp).subi(sm.mul(sp)));
+        result.getColumn(1).assign(cm.neg().muli(cg)).muli(sp).subi(sm.mul(cp));
+        result.getColumn(2).assign(cm.mul(sg));
+
+        result.getColumn(4).assign(sm.mul(cg).muli(cp).addi(cm.mul(sp)));
+        result.getColumn(5).assign(sm.neg().muli(cg).muli(sp).addi(cm.mul(cp)));
+        result.getColumn(6).assign(sm.mul(sg));
+
+        result.getColumn(8).assign(sg.neg().muli(cp));
+        result.getColumn(9).assign(sg.mul(sp));
+        result.getColumn(10).assign(cg);
+
+        sp = Transforms.sin(phi.dup());
+        cp = Transforms.cos(phi.dup());
+        sg = Transforms.sin(gamma.div(2.0));
+        cg = Transforms.cos(gamma.div(2.0));
+
+        INDArray t4 = stepdata.getColumn(3);
+        INDArray t5 = stepdata.getColumn(4);
+        INDArray t6 = stepdata.getColumn(5);
+
+        result.getColumn(3).assign(t4.mul(cm.mul(cg).muli(cp).subi(sm.mul(sp)))
+                .addi(t5.mul(cm.mul(cg).muli(sp).negi().subi(sm.mul(cp))))
+                .addi(t6.mul(cm).muli(sg)));
+        result.getColumn(7).assign(t4.mul(sm.mul(cg).muli(cp).addi(cm.mul(sp)))
+                .addi(t5.mul(sm.mul(cg).muli(sp).negi().addi(cm.mul(cp))))
+                .addi(t6.mul(sm).muli(sg)));
+        result.getColumn(11).assign(t4.mul(sg.mul(cp).negi())
+                .addi(t5.mul(sg).muli(sp))
+                .addi(t6.mul(cg)));
+
+        result.getColumn(15).assign(1.0);
+
+        INDArray r = result.reshape(stepdata.rows(), 4, 4);
+
+        return r;
+    }
 
     public static INDArray calculatetp(INDArray A) {
 
@@ -418,6 +474,248 @@ public class NDDNA implements Serializable {
         return refs;
     }
 
+
+    /**
+     * Calculate the 4x4 frame matrix from cgDNA internal coordinates for John Maddocks' lab
+     * @param ic The internal coordinates (6x1 matrix) used in cgDNA
+     * @return the 4x4 reference frame matrix
+     */
+    public static INDArray calculateFra(INDArray ic) {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        double uscale = 5.0;
+
+        INDArray result = Nd4j.eye(4);
+
+        INDArray u = Nd4j.zeros(1, 3);
+        INDArray v = Nd4j.zeros(1, 3);
+
+        u.getColumn(0).assign(ic.getDouble(0));
+        u.getColumn(1).assign(ic.getDouble(1));
+        u.getColumn(2).assign(ic.getDouble(2));
+        v.getColumn(0).assign(ic.getDouble(3));
+        v.getColumn(1).assign(ic.getDouble(4));
+        v.getColumn(2).assign(ic.getDouble(5));
+
+
+        u.muli(0.1);
+
+        INDArray uvec = Nd4j.zeros(3, 3);
+        uvec.getRow(0).getColumn(1).assign(-u.getDouble(2));
+        uvec.getRow(0).getColumn(2).assign(u.getDouble(1));
+        uvec.getRow(1).getColumn(2).assign(-u.getDouble(0));
+
+        uvec.subi(uvec.transpose());
+
+        double v1 = u.mmul(u.transpose()).getDouble(0);
+
+        INDArray upuu = uvec.add(uvec.mmul(uvec));
+
+        INDArray Q = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
+        INDArray uhalf = u.mul(uscale*(2.0/(1.0+sqrt(1.0 + u.transpose().mmul(u).getDouble(0)))));
+
+        u = uhalf.mul(0.1);
+
+        uvec = Nd4j.zeros(3, 3);
+        uvec.getRow(0).getColumn(1).assign(-u.getDouble(2));
+        uvec.getRow(0).getColumn(2).assign(u.getDouble(1));
+        uvec.getRow(1).getColumn(2).assign(-u.getDouble(0));
+
+        uvec.subi(uvec.transpose());
+
+        v1 = u.mmul(u.transpose()).getDouble(0);
+        upuu = uvec.add(uvec.mmul(uvec));
+
+        INDArray Qhalf = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
+        INDArray q = Qhalf.mmul(v.transpose());
+
+        for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++)
+            result.getRow(i).getColumn(j).assign(Q.getDouble(i,j));
+
+        result.getRow(0).getColumn(3).assign(q.getDouble(0));
+        result.getRow(1).getColumn(3).assign(q.getDouble(1));
+        result.getRow(2).getColumn(3).assign(q.getDouble(2));
+
+        return result;
+
+    }
+
+    // calculate Psi = 2*atan(|x|/10) and scale unit Cayley vector = (x1, x2, x3)/|x| by Psi
+    public static INDArray icAsSteps(INDArray ic) {
+        INDArray result = ic.dup();
+//        result.getRow(0).assign(36.0*result.getDouble(0)/Math.PI);
+//        result.getRow(1).assign(36.0*result.getDouble(1)/Math.PI);
+//        result.getRow(2).assign(36.0*result.getDouble(2)/Math.PI);
+        double val = Math.sqrt(result.getDouble(0)*result.getDouble(0)+result.getDouble(1)*result.getDouble(1)+result.getDouble(2)*result.getDouble(2));
+        result.getRow(0).assign(360.0*result.getDouble(0)*atan(val/10.0)/(val*Math.PI));
+        result.getRow(1).assign(360.0*result.getDouble(1)*atan(val/10.0)/(val*Math.PI));
+        result.getRow(2).assign(360.0*result.getDouble(2)*atan(val/10.0)/(val*Math.PI));
+
+        return result;
+    }
+
+    public static INDArray calculateQhalf(Matrix4d fra) {
+        double uscale = 5.0;
+        double trace = fra.getElement(0,0) + fra.getElement(1,1) + fra.getElement(2,2);
+
+        INDArray q = Nd4j.zeros(3, 1);
+        q.getRow(0).assign(fra.getElement(0, 3));
+        q.getRow(1).assign(fra.getElement(1, 3));
+        q.getRow(2).assign(fra.getElement(2, 3));
+
+        INDArray result = Nd4j.zeros(6, 1);
+
+        INDArray a = Nd4j.zeros(3,1);
+
+        a.getRow(0).assign(fra.getElement(2, 1) - fra.getElement(1, 2));
+        a.getRow(1).assign(fra.getElement(0, 2) - fra.getElement(2, 0));
+        a.getRow(2).assign(fra.getElement(1, 0) - fra.getElement(0, 1));
+
+        INDArray u = a.mul(uscale*(2.0/(trace + 1.0)));
+
+        result.getRow(0).assign(u.getRow(0));
+        result.getRow(1).assign(u.getRow(1));
+        result.getRow(2).assign(u.getRow(2));
+
+        u.muli(0.1);
+
+        double v1 = u.transpose().mmul(u).getDouble(0);
+
+        INDArray uhalf = u.mul(uscale*(2.0/(1.0 + sqrt(1.0+v1))));
+
+        u = uhalf.mul(0.1);
+
+        INDArray uvec = Nd4j.zeros(3, 3);
+        uvec.getRow(0).getColumn(1).assign(-u.getDouble(2));
+        uvec.getRow(0).getColumn(2).assign(u.getDouble(1));
+        uvec.getRow(1).getColumn(2).assign(-u.getDouble(0));
+
+        uvec.subi(uvec.transpose());
+
+        v1 = u.transpose().mmul(u).getDouble(0);
+        INDArray upuu = uvec.add(uvec.mmul(uvec));
+
+        INDArray Qhalf = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
+
+        return Qhalf;
+    }
+
+    /**
+     * Calculate the 6x1 internal coordinates from a 4x4 reference frame matrix for John Maddocks' lab
+     * @param fra A 4x4 matrix containing rotation and translation in SE(3)
+     * @return Internal cgDNA coordinates in a 6x1 matrix
+     */
+    public static INDArray calculateIc(INDArray fra) {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        double uscale = 5.0;
+        double trace = fra.getDouble(0,0) + fra.getDouble(1,1) + fra.getDouble(2,2);
+
+        INDArray q = Nd4j.zeros(3, 1);
+        q.getRow(0).assign(fra.getDouble(0, 3));
+        q.getRow(1).assign(fra.getDouble(1, 3));
+        q.getRow(2).assign(fra.getDouble(2, 3));
+
+        INDArray result = Nd4j.zeros(6, 1);
+
+        INDArray a = Nd4j.zeros(3,1);
+
+        a.getRow(0).assign(fra.getDouble(2, 1) - fra.getDouble(1, 2));
+        a.getRow(1).assign(fra.getDouble(0, 2) - fra.getDouble(2, 0));
+        a.getRow(2).assign(fra.getDouble(1, 0) - fra.getDouble(0, 1));
+
+        INDArray u = a.mul(uscale*(2.0/(trace + 1.0)));
+
+        result.getRow(0).assign(u.getRow(0));
+        result.getRow(1).assign(u.getRow(1));
+        result.getRow(2).assign(u.getRow(2));
+
+        u.muli(0.1);
+
+        double v1 = u.transpose().mmul(u).getDouble(0);
+
+        INDArray uhalf = u.mul(uscale*(2.0/(1.0 + sqrt(1.0+v1))));
+
+        u = uhalf.mul(0.1);
+
+        INDArray uvec = Nd4j.zeros(3, 3);
+        uvec.getRow(0).getColumn(1).assign(-u.getDouble(2));
+        uvec.getRow(0).getColumn(2).assign(u.getDouble(1));
+        uvec.getRow(1).getColumn(2).assign(-u.getDouble(0));
+
+        uvec.subi(uvec.transpose());
+
+        v1 = u.transpose().mmul(u).getDouble(0);
+        INDArray upuu = uvec.add(uvec.mmul(uvec));
+
+        INDArray Qhalf = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
+
+        INDArray v = Qhalf.transpose().mmul(q);
+
+        result.getRow(3).assign(v.getDouble(0));
+        result.getRow(4).assign(v.getDouble(1));
+        result.getRow(5).assign(v.getDouble(2));
+
+        return result;
+
+    }
+
+    /**
+     * Calculate the 6x1 internal coordinates from a 4x4 reference frame matrix for John Maddocks' lab
+     * @param fra A 4x4 matrix containing rotation and translation in SE(3)
+     * @return Internal cgDNA coordinates in a 6x1 matrix
+     */
+    public static INDArray calculateIcPho(INDArray fra) {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        double uscale = 5.0;
+        double trace = fra.getDouble(0,0) + fra.getDouble(1,1) + fra.getDouble(2,2);
+
+        INDArray q = Nd4j.zeros(3, 1);
+        q.getRow(0).assign(fra.getDouble(0, 3));
+        q.getRow(1).assign(fra.getDouble(1, 3));
+        q.getRow(2).assign(fra.getDouble(2, 3));
+
+        INDArray result = Nd4j.zeros(6, 1);
+
+        INDArray a = Nd4j.zeros(3,1);
+
+        a.getRow(0).assign(fra.getDouble(2, 1) - fra.getDouble(1, 2));
+        a.getRow(1).assign(fra.getDouble(0, 2) - fra.getDouble(2, 0));
+        a.getRow(2).assign(fra.getDouble(1, 0) - fra.getDouble(0, 1));
+
+        INDArray u = a.mul(uscale*(2.0/(trace + 1.0)));
+
+        result.getRow(0).assign(u.getRow(0));
+        result.getRow(1).assign(u.getRow(1));
+        result.getRow(2).assign(u.getRow(2));
+
+        u.muli(0.1);
+
+        double v1 = u.transpose().mmul(u).getDouble(0);
+
+        INDArray uhalf = u.mul(uscale*(2.0/(1.0 + sqrt(1.0+v1))));
+
+        u = uhalf.mul(0.1);
+
+        INDArray uvec = Nd4j.zeros(3, 3);
+        uvec.getRow(0).getColumn(1).assign(-u.getDouble(2));
+        uvec.getRow(0).getColumn(2).assign(u.getDouble(1));
+        uvec.getRow(1).getColumn(2).assign(-u.getDouble(0));
+
+        uvec.subi(uvec.transpose());
+
+        v1 = u.transpose().mmul(u).getDouble(0);
+        INDArray upuu = uvec.add(uvec.mmul(uvec));
+
+        INDArray Qhalf = Nd4j.eye(3).add(upuu.mul(2.0/(1.0 + v1)));
+
+        INDArray v = Qhalf.transpose().mmul(q);
+
+        result.getRow(3).assign(fra.getColumn(3).getDouble(0));
+        result.getRow(4).assign(fra.getColumn(3).getDouble(1));
+        result.getRow(5).assign(fra.getColumn(3).getDouble(2));
+
+        return result;
+
+    }
 
 }
 

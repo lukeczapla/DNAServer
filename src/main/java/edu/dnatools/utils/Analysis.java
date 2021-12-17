@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -22,9 +23,9 @@ import java.util.stream.Stream;
  * Created by luke on 6/10/17.
  */
 public class Analysis {
-    private static Logger log = LoggerFactory.getLogger(Analysis.class);
-    private static Gson gson = new GsonBuilder().create();
-    private static String rootfolder = "jobs/";
+    private static final Logger log = LoggerFactory.getLogger(Analysis.class);
+    private static final Gson gson = new GsonBuilder().create();
+    private static final String rootfolder = "jobs/";
 
     public static Results analyzeJob(Job job) {
         String token = job.getToken();
@@ -55,7 +56,7 @@ public class Analysis {
             String Jfilepath = rootfolder+token + "/Jfactor-" + steps + "bp_ID" + job.getSeed();
             File Jfile = new File(Jfilepath);
             if (Jfile.exists()) {
-                String content = FileUtils.readFileToString(Jfile);
+                String content = FileUtils.readFileToString(Jfile, Charset.defaultCharset());
                 String txt = "J by boundary = ";
                 int position = content.indexOf(txt) + txt.length();
                 result.Jfactor = ("[" + content.substring(position, content.length()-2) + "]");
@@ -156,10 +157,10 @@ public class Analysis {
                 if (job.getHasProteins() && distanceHistograms != null) distanceHistograms[i] = distanceHistogram;
             }
             log.info(result.Jfactor);
-            if (twistHistograms != null) result.twistHistogram = gson.toJson(twistHistograms);
-            if (writheHistograms != null) result.writheHistogram = gson.toJson(writheHistograms);
-            if (linkHistograms != null) result.linkHistogram = gson.toJson(linkHistograms);
-            if (rgHistograms != null) result.rgHistogram = gson.toJson(rgHistograms);
+            result.twistHistogram = gson.toJson(twistHistograms);
+            result.writheHistogram = gson.toJson(writheHistograms);
+            result.linkHistogram = gson.toJson(linkHistograms);
+            result.rgHistogram = gson.toJson(rgHistograms);
             if (positionHistograms != null) result.positionHistogram = gson.toJson(positionHistograms);
             if (numberHistograms != null) result.numberHistogram = gson.toJson(numberHistograms);
             if (distanceHistograms != null) result.distanceHistogram = gson.toJson(distanceHistograms);
@@ -178,7 +179,7 @@ public class Analysis {
         File file = new File(filepath);
         try {
             if (file.exists()) {
-                return FileUtils.readFileToString(file);
+                return FileUtils.readFileToString(file, Charset.defaultCharset());
             }
             log.info("File not found");
             return null;
@@ -199,7 +200,7 @@ public class Analysis {
             }
             String filename = rootfolder+job.getToken()+"/out.pdb";
             File file = new File(filename);
-            if (file.exists()) return FileUtils.readFileToString(file);
+            if (file.exists()) return FileUtils.readFileToString(file, Charset.defaultCharset());
             return null;
         } catch (IOException|InterruptedException e) {
             log.info(e.getMessage());

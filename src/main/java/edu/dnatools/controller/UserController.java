@@ -42,18 +42,18 @@ import java.util.Set;
 @Api("User login and registration")
 public class UserController {
 
-    private static Logger log = LoggerFactory.getLogger(UserController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
     private static final JacksonFactory jacksonFactory = new JacksonFactory();
 
-    @Autowired
-    UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
+    private final UserService userService;
+    private final GoogleProperties googleProperties;
 
-    @Autowired
-    UserService userService;
-    
-    @Autowired
-    GoogleProperties googleProperties;
-
+    public UserController(UserDetailsService userDetailsService, UserService userService, GoogleProperties googleProperties) {
+        this.userDetailsService = userDetailsService;
+        this.userService = userService;
+        this.googleProperties = googleProperties;
+    }
 
 
     @ApiOperation("Retrieve list of all registered users")
@@ -74,9 +74,9 @@ public class UserController {
     @ApiOperation(value = "Authenticate the provided user", notes = "User information obtained from Google")
     @RequestMapping(value = "/conf/user", method = RequestMethod.POST)
     @JsonView(JsonViews.User.class)
-    public ResponseEntity login(@RequestBody User user) throws Exception {
+    public ResponseEntity<String> login(@RequestBody User user) throws Exception {
         if (user == null || user.getEmail() == null) {
-            return new ResponseEntity("Invalid data", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
         }
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), jacksonFactory)
                 .setAudience(Collections.singletonList(googleProperties.getClientId()))
@@ -85,11 +85,11 @@ public class UserController {
         GoogleIdToken idToken = verifier.verify(user.getTokenId());
 
         if (idToken == null) {
-            return new ResponseEntity("Invalid token data", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Invalid token data", HttpStatus.BAD_REQUEST);
         } else {
             Payload payload = idToken.getPayload();
             if (payload == null || !payload.getEmail().equals(user.getEmail())) {
-                return new ResponseEntity("Invalid email address", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid email address", HttpStatus.BAD_REQUEST);
             }
             log.info("Verified account");
         }
@@ -100,7 +100,7 @@ public class UserController {
                     userDetailsService.loadUserByUsername(user.getEmail()).getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authrequest);
 
-            return new ResponseEntity("Finished, authenticated", HttpStatus.OK);
+            return new ResponseEntity<>("Finished, authenticated", HttpStatus.OK);
 
         } else {
 
@@ -108,14 +108,14 @@ public class UserController {
                 userDetailsService.registerNewAccount(user);
             } catch (Exception e) {
                 e.printStackTrace();
-                return new ResponseEntity("Invalid email address", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Invalid email address", HttpStatus.BAD_REQUEST);
             }
 
             Set<GrantedAuthority> grant = new HashSet<GrantedAuthority>();
             grant.add(new SimpleGrantedAuthority(user.getRole().toString()));
             UsernamePasswordAuthenticationToken authrequest = new UsernamePasswordAuthenticationToken(user.getEmail(), null, grant);
             SecurityContextHolder.getContext().setAuthentication(authrequest);
-            return new ResponseEntity("Created, authenticated", HttpStatus.OK);
+            return new ResponseEntity<>("Created, authenticated", HttpStatus.OK);
 
         }
         //return new ResponseEntity("Invalid data", HttpStatus.BAD_REQUEST);
@@ -130,13 +130,12 @@ public class UserController {
 
 
     @RequestMapping(value = "/conf/user/test", method = RequestMethod.GET)
-    public ResponseEntity test(Authentication authentication) {
+    public ResponseEntity<String> test(Authentication authentication) {
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
             log.info(SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString());
         }
 
-        return new ResponseEntity("Ok", HttpStatus.OK);
+        return new ResponseEntity<>("Ok", HttpStatus.OK);
     }
-
 
 }

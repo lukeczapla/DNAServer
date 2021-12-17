@@ -6,7 +6,6 @@ import com.google.gson.GsonBuilder;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import edu.dnatools.calculate.MCDNA;
-import edu.dnatools.calculate.NDDNA;
 import edu.dnatools.model.*;
 import edu.dnatools.repository.UserRepository;
 import edu.dnatools.service.JobService;
@@ -28,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.List;
 
@@ -40,17 +40,19 @@ public class JobController {
 
     public static String rootfolder = "jobs/";
 
-    @Autowired
-    UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final JobService jobService;
+    private final ProteinService proteinService;
 
     @Autowired
-    JobService jobService;
+    public JobController(UserRepository userRepository, JobService jobService, ProteinService proteinService) {
+        this.userRepository = userRepository;
+        this.jobService = jobService;
+        this.proteinService = proteinService;
+    }
 
-    @Autowired
-    ProteinService proteinService;
-
-    private static Logger log = LoggerFactory.getLogger(JobController.class);
-    private static Gson gson = new GsonBuilder().create();
+    private static final Logger log = LoggerFactory.getLogger(JobController.class);
+    private static final Gson gson = new GsonBuilder().create();
 
     @ApiOperation(value = "Test the Java simulation backend")
     @RequestMapping(value = "/calculate", method = RequestMethod.POST)
@@ -65,7 +67,7 @@ public class JobController {
     @ApiOperation(value = "Submit a calculation", response = Job.class, responseContainer = "List", notes = "Large data set sent")
     @RequestMapping(value = "/submit", method = RequestMethod.POST)
     @JsonView({JsonViews.JobInput.class, JsonViews.Job.class})
-    public ResponseEntity processJob(@RequestBody JobInput input, Principal prince) {
+    public ResponseEntity<String> processJob(@RequestBody JobInput input, Principal prince) {
         log.debug(input.getForceConstants());
         log.debug(input.getStepParameters());
         log.debug(input.getSequence());
@@ -73,7 +75,7 @@ public class JobController {
         input.tp0 = gson.fromJson(input.getStepParameters(), double[][].class);
         if (input.getBc() != null) input.bounds = gson.fromJson(input.getBc(), double[][].class);
         if (input.fc == null || input.tp0 == null || input.getSequence() == null || input.getSequence().length() < 2) {
-            return new ResponseEntity("ERROR: BAD INPUT", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("ERROR: BAD INPUT", HttpStatus.BAD_REQUEST);
         }
         if (input.getSeed() == null) {
             input.setSeed((long)(10000*Math.random()));
@@ -89,9 +91,9 @@ public class JobController {
 
         if (jobService.add(submittedJob) != null) {
             Job result = jobService.getJobByToken(token);
-            return new ResponseEntity("{\"id\": " + result.getId() + ", \"token\":\"" + token + "\"}", HttpStatus.OK);
+            return new ResponseEntity<>("{\"id\": " + result.getId() + ", \"token\":\"" + token + "\"}", HttpStatus.OK);
         }
-        else return new ResponseEntity("ERROR: Could not add", HttpStatus.BAD_REQUEST);
+        else return new ResponseEntity<>("ERROR: Could not add", HttpStatus.BAD_REQUEST);
 
     }
 
@@ -119,17 +121,17 @@ public class JobController {
 
     @ApiOperation(value = "Delete one of the jobs for the current user")
     @RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
-    public ResponseEntity deleteJob(@PathVariable("id") Long id, Principal prince) {
+    public ResponseEntity<String> deleteJob(@PathVariable("id") Long id, Principal prince) {
         if (prince == null) return null;
         Job job = jobService.getOne(id);
-        if (job == null) return new ResponseEntity("ERROR", HttpStatus.BAD_REQUEST);
+        if (job == null) return new ResponseEntity<>("ERROR", HttpStatus.BAD_REQUEST);
         User user = userRepository.findByEmail(prince.getName());
         if (job.getUser().equals(user)) {
             SystemUtils.deleteFolder(rootfolder+job.getToken());
             jobService.delete(id);
-            return new ResponseEntity("DONE", HttpStatus.OK);
+            return new ResponseEntity<>("DONE", HttpStatus.OK);
         }
-        return new ResponseEntity("ERROR", HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>("ERROR", HttpStatus.FORBIDDEN);
     }
 
     @ApiOperation(value = "Analyze and return results for a job")
@@ -170,7 +172,7 @@ public class JobController {
             String filename = rootfolder + job.getToken()+"/proteins-"+(job.getSequence().length()-1)+"bp-ID"
                     + job.getSeed() + "-B" + boundId + "-" + structureId + ".pdb";
             File file = new File(filename);
-            if (file.exists()) return FileUtils.readFileToString(file);
+            if (file.exists()) return FileUtils.readFileToString(file, Charset.defaultCharset());
             else return null;
         }
         return null;
@@ -244,8 +246,7 @@ public class JobController {
         if (!job.getUser().equals(user)) return null;
         if (!(new File("jobs/"+job.getToken()+"/result.tar.gz").exists()))
             Analysis.getZipFile(job);
-        InputStream in = new FileInputStream(new File("jobs/"+job.getToken()+"/result.tar.gz"));
-        if (in == null) return null;
+        InputStream in = new FileInputStream("jobs/"+job.getToken()+"/result.tar.gz");
         return IOUtils.toByteArray(in);
     }
 
