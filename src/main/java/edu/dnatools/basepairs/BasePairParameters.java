@@ -601,6 +601,15 @@ Returns 4x4 matrix reference frame for a single base
         return result;
     }
 
+    public Matrix4d expressPhosphateMidbasis(int n) {
+        double[][] steps = getStepParameters();
+        Matrix4d middle = calculateM(steps[n]);
+        double[][] pairing = getPairingParameters();
+        double[][] pho = getPhosphateParameters();
+        return new Matrix4d();
+    }
+
+
     @Override
     public String toString() {
         if (getPairingParameters() == null) return "No data";

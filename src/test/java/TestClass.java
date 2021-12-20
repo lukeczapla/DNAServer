@@ -176,6 +176,12 @@ public class TestClass {
         mydna.launch(20, 2.0f);
     }
 
+    /**
+     * This writes files compatible with the reactdna website that used the mean.txt and cov.txt files for each system (TX3, cgDNA+, MD)
+     * by using the jmtetramers.txt along with the ordering.txt with the proper order of tetramers in the system.  It has to reverse the
+     * packing of certain tetramers that aren't in the 136 set originally used here but have been initially calculated with the list of
+     * 136 tetramers provided by Wilma Olson at Rutgers using Euler angles.
+     */
     @Test
     public void writeMaddocks() {
         Nd4j.setDataType(DataBuffer.Type.DOUBLE);
@@ -191,6 +197,7 @@ public class TestClass {
                 tetramerCov.put(tetramer, Nd4j.create(30, 30));
             }
             Gson gson = new Gson();
+            System.out.println(gson.toJson(tetramers));
             scan = new Scanner(new FileInputStream("jmtetramers.txt"));
             for (int i = 0; i < 136; i++) {
                 String tetramer = scan.next();
@@ -235,6 +242,21 @@ public class TestClass {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Test
+    public void testMB() {
+        PDBFileReader reader = new PDBFileReader();
+        Structure s;
+        try {
+            //s = StructureIO.getStructure("1e7j");
+            s = reader.getStructure(new FileInputStream("test-BDNA.pdb"));
+        } catch (IOException/*|StructureException*/ e) {
+            e.printStackTrace();
+            return;
+        }
+        BasePairParameters bp = new BasePairParameters(s);
+        bp.analyze();
     }
 
     @Test

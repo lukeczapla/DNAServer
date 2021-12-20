@@ -444,8 +444,8 @@ public class ForceField {
                 log.info("USING STANDARD DEVIATION REDUCTION FOR SYSTEM");
                 if (culledArray == null) culledArray = cullStd(totals, 3.0, ds);
                 else culledArray = cullStd(culledArray, 3.0, ds);
-                for (int j = 0; j < 9; j++)
-                    culledArray = cullStd(culledArray, 3.0, ds);
+                //for (int j = 0; j < 9; j++)
+                //    culledArray = cullStd(culledArray, 3.0, ds);
             }
             if (input.getCullStandard() != null && input.getCullEigen() != null && !input.getCullStandard() && !input.getCullEigen())
                 culledArray = totals.dup();
@@ -535,8 +535,9 @@ public class ForceField {
                         culledArray = cullEigen(culledArray, 3.0, ds);
                 }
                 if (input.getCullStandard() != null && input.getCullStandard()) {
-                    for (int j = 0; j < 10; j++)
-                        culledArray = cullStd(culledArray, 3.0, ds);
+                    culledArray = cullStd(culledArray, 3.0, ds);
+                    //for (int j = 0; j < 9; j++)
+                    //    culledArray = cullStd(culledArray, 3.0, ds);
                 }
             } else culledArray = totals;
 
