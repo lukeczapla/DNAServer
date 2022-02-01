@@ -168,7 +168,7 @@ public class NDDNA implements Serializable {
                 List<Point3D> CApositions = new ArrayList<>();
                 List<Point3D> allpositions = new ArrayList<>();
                 for (int k = 0; k < lines.length; k++) {
-                    if (lines[k].substring(0, 4).equals("ATOM")) {
+                    if (lines[k].startsWith("ATOM")) {
                         int n = Integer.parseInt(lines[k].substring(22, 26).trim());
                         float x = Float.parseFloat(lines[k].substring(30, 38));
                         float y = Float.parseFloat(lines[k].substring(38, 46));

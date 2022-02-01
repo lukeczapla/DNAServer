@@ -105,7 +105,19 @@ void translate_position(matrix W, float &x, float &y, float &z) {
 */
 }
 
-void rewrite_pdb(char *in, char *out, matrix W, matrix new1) {
+void translateMe(matrix W, matrix inv, float &x, float &y, float &z) {
+  //x -= W(1,4);
+  //y -= W(2,4);
+  //z -= W(3,4);
+  float xn = inv(1,1)*x+inv(1,2)*y+inv(1,3)*z+inv(1,4);
+  float yn = inv(2,1)*x+inv(2,2)*y+inv(2,3)*z+inv(2,4);
+  float zn = inv(3,1)*x+inv(3,2)*y+inv(3,3)*z+inv(3,4);
+  x = xn;
+  y = yn;
+  z = zn;
+}
+
+void rewrite_pdb(char *in, char *out, matrix W, matrix inv) {
     char atom[8];
     char anum[7];
     char at[7];
@@ -129,13 +141,14 @@ void rewrite_pdb(char *in, char *out, matrix W, matrix new1) {
       strcpy(none, "    ");
       sscanf(s, "%6c%5c%5c%4c%2c%4c%4c%8f%8f%8f", atom, anum, at, res, chain, resn, none, &x, &y, &z);
       if (strcmp(atom, "ATOM  ") == 0) {
-      translate_position(W, x, y, z);
-      float xn = new1(1,4)+x*new1(1,1)+y*new1(1,2)+z*new1(1,3);
-      float yn = new1(2,4)+x*new1(2,1)+y*new1(2,2)+z*new1(2,3);
-      float zn = new1(3,4)+x*new1(3,1)+y*new1(3,2)+z*new1(3,3);
+      translateMe(W, inv, x, y, z);
+      //translate_position(W, x, y, z);
+      //float xn = new1(1,4)+x*new1(1,1)+y*new1(1,2)+z*new1(1,3);
+      //float yn = new1(2,4)+x*new1(2,1)+y*new1(2,2)+z*new1(2,3);
+      //float zn = new1(3,4)+x*new1(3,1)+y*new1(3,2)+z*new1(3,3);
 
      // printf("%f %f %f", x, y, z);
-      fprintf(f2, "%6s%5s%5s%4s%2s%4s%4s%8.3f%8.3f%8.3f  1.00 15.00\n", atom, anum, at, res, chain, resn, none, xn, yn, zn);
+      fprintf(f2, "%6s%5s%5s%4s%2s%4s%4s%8.3f%8.3f%8.3f  1.00 15.00\n", atom, anum, at, res, chain, resn, none, x, y, z);
       }
       
     } while ((strcmp(atom, "ATOM  ") == 0) && (p != NULL));
@@ -154,12 +167,11 @@ int main(int argc, char **argv) {
   matrix W(4,4);
   read_reference(argv[1], &W);
 
-
-  matrix n = identity(4);
+  //matrix n = identity(4);
 
   writematrix(stdout, W);
 
-  rewrite_pdb(argv[2], argv[3], W, n); 
+  rewrite_pdb(argv[2], argv[3], W, invert(W)); 
 
   return 1;
 }

@@ -152,7 +152,7 @@ void rewrite_pdb(char *in, char *out, matrix W, matrix new1, char append) {
 
 
 
-void main_old(int argc, char **argv) {
+void oldmain(int argc, char **argv) {
   if (argc != 4) {
     printf("usage: translate_protein [step.dat] [input.pdb] [output.pdb]\n");
     exit(0);

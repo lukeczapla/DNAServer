@@ -328,7 +328,7 @@ function submitFF() {
      let opt = $("#structureType").val();
      console.log(opt);
      switch (parseInt(opt)) {
-        case 1: request = queryProteinDNA; break;
+        case 1: request = queryProteinDNAXray; break;   //queryProteinDNA; break;
         case 2: request = queryDNAonly; break;
         case 3: request = queryProteinRNA; break;
         case 4: request = queryRNAonly; break;

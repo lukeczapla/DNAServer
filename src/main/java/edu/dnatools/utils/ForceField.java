@@ -192,7 +192,7 @@ public class ForceField {
                         if (k == region.length()-1) ctx += ".";
                         else ctx += "" + region.charAt(k+1);
                         if (k == region.length()-1) ctxt += "..";
-                        else if (k == region.length()-2) ctx += "" + region.charAt(k+1) + ".";
+                        else if (k == region.length()-2) ctxt += "" + region.charAt(k+1) + ".";
                         else ctxt += "" + region.charAt(k+1) + region.charAt(k+2);
                         double[] pW = entry.get30Coordinates(counter);
                         double[] pC = BasePairParameters.reversePacking(entry.get30Coordinates(counter));
@@ -396,6 +396,61 @@ public class ForceField {
         return culledArray;
     }
 
+    public INDArray cullStd6(INDArray dataset, double ndevs, StringBuilder discardedData) {
+        INDArray reshaped = Nd4j.zeros(dataset.rows(), 6);
+        for (int i = 0; i < dataset.rows(); i++) {
+            for (int j = 0; j < 6; j++) {
+                reshaped.getRow(i).getColumn(j).assign(dataset.getRow(i).getDouble(j+12));
+            }
+        }
+        INDArray mean = Nd4j.create(1, 6);
+        for (int i = 0; i < reshaped.rows(); i++) {
+            mean.addi(reshaped.getRow(i));
+        }
+        mean.divi(reshaped.rows());
+        INDArray stddev = Nd4j.create(1, 6);
+        for (int i = 0; i < reshaped.rows(); i++) {
+            stddev.addi(Transforms.pow(reshaped.getRow(i).sub(mean), 2.0, true));
+        }
+        stddev.divi(reshaped.rows());
+        Transforms.pow(stddev, 0.5, false);
+
+        int count = 0;
+        for (int i = 0; i < reshaped.rows(); i++) {
+            INDArray dev = reshaped.getRow(i).sub(mean);
+            for (int j = 0; j < 6; j++) {
+                if (Math.abs(dev.getDouble(j)) > ndevs * stddev.getDouble(j)) {
+                    break;
+                }
+                if (j == 5) count++;
+            }
+        }
+        INDArray culledArray = Nd4j.create(count, 30);
+        int total = count;
+        count = 0;
+        int discarded = 0;
+        for (int i = 0; i < dataset.rows(); i++) {
+            INDArray dev = reshaped.getRow(i).sub(mean);
+            //log.info("{} with stddev {}", dev.toString(), stddev);
+            for (int j = 0; j < 6; j++) {
+                if (Math.abs(dev.getDouble(j)) > ndevs * stddev.getDouble(j)) {
+                    discardedData.append(dataset.getRow(i));
+                    StepData st = new StepData(dataset.getRow(i));
+                    StructuralData sd = nmap.get(st);
+                    if (sd != null) {
+                        String context = cmap.get(st);
+                        discardedData.append(" ").append(sd.pdbId).append(" ").append(context).append("\n");
+                    }
+                    discarded++;
+                    break;
+                }
+                if (j == 5) culledArray.putRow(count++, dataset.getRow(i));
+            }
+        }
+        assert count == total;
+        log.info("Discarded {} items", discarded);
+        return culledArray;
+    }
 
     public void createModel() {
 
@@ -435,15 +490,21 @@ public class ForceField {
 
             INDArray culledArray = null;
             if (input.getCullEigen() != null && input.getCullEigen()) {
-                log.info("USING EIGENVECTOR/VALUE DEVIATION REDUCTION FOR SYSTEM");
+                log.info("USING EIGENVECTOR/VALUE DEVIATION REDUCTION FOR SYSTEM - DIMERS");
                 culledArray = cullEigen(totals, 3.0, ds);
-                for (int j = 0; j < 9; j++)
-                    culledArray = cullEigen(culledArray, 3.0, ds);
+                //for (int j = 0; j < 9; j++)
+                    //culledArray = cullEigen(culledArray, 3.0, ds);
             }
             if (input.getCullStandard() != null && input.getCullStandard()) {
-                log.info("USING STANDARD DEVIATION REDUCTION FOR SYSTEM");
-                if (culledArray == null) culledArray = cullStd(totals, 3.0, ds);
-                else culledArray = cullStd(culledArray, 3.0, ds);
+                log.info("USING STANDARD DEVIATION REDUCTION FOR SYSTEM - DIMERS");
+                culledArray = cullStd6(Objects.requireNonNullElse(culledArray, totals), 3.0, ds);
+                int lastsize;
+                int newsize = culledArray.rows();
+                do {
+                    culledArray = cullStd6(culledArray, 3.0, ds);
+                    lastsize = newsize;
+                    newsize = culledArray.rows();
+                } while (lastsize != newsize);
                 //for (int j = 0; j < 9; j++)
                 //    culledArray = cullStd(culledArray, 3.0, ds);
             }
@@ -525,17 +586,25 @@ public class ForceField {
 
             //log.info(ns.format(myPCA.getCovarianceMatrix()));
             //log.info(ns.format(InvertMatrix.invert(myPCA.getCovarianceMatrix(), false)));
-            log.info("REDUCING DATASET\n");
+            log.info("REDUCING DATASET - TETRAMERS\n");
 
             INDArray culledArray;
             if (totals.rows() > 10) {
                 culledArray = totals.dup();
                 if (input.getCullEigen() != null && input.getCullEigen()) {
-                    for (int j = 0; j < 10; j++)
+                    for (int j = 0; j < 1; j++)
                         culledArray = cullEigen(culledArray, 3.0, ds);
                 }
                 if (input.getCullStandard() != null && input.getCullStandard()) {
-                    culledArray = cullStd(culledArray, 3.0, ds);
+                    //culledArray = cullStd(culledArray, 3.0, ds);
+                    culledArray = cullStd6(culledArray, 3.0, ds);
+                    int lastsize;
+                    int newsize = culledArray.rows();
+                    do {
+                        culledArray = cullStd6(culledArray, 3.0, ds);
+                        lastsize = newsize;
+                        newsize = culledArray.rows();
+                    } while (lastsize != newsize);
                     //for (int j = 0; j < 9; j++)
                     //    culledArray = cullStd(culledArray, 3.0, ds);
                 }

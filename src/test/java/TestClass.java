@@ -226,13 +226,13 @@ public class TestClass {
             for (String tetramer : tetramers) {
                 INDArray mean = tetramerMeans.get(tetramer);
                 out.print(tetramer);
-                for (int i = 0; i < 30; i++) out.printf(" %f", mean.getDouble(i));
+                for (int i = 0; i < 30; i++) out.printf(" %6.4f", mean.getDouble(i));
                 out.println();
                 INDArray cov = tetramerCov.get(tetramer);
                 for (int i = 0; i < 30; i++) {
                     out2.print(tetramer);
                     for (int j = 0; j < 30; j++) {
-                        out2.printf(" %f", cov.getRow(i).getDouble(j));
+                        out2.printf(" %6.4f", cov.getRow(i).getDouble(j));
                     }
                     out2.println();
                 }

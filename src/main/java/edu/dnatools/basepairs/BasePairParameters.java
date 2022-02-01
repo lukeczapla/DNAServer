@@ -605,7 +605,11 @@ Returns 4x4 matrix reference frame for a single base
         double[][] steps = getStepParameters();
         Matrix4d middle = calculateM(steps[n]);
         double[][] pairing = getPairingParameters();
+        Matrix4d Mbp = calculateM(pairing[n-1]);
+        Mbp.invert();
+        Mbp.mul(calculateA(pairing[n-1]));
         double[][] pho = getPhosphateParameters();
+        Mbp.mul(calculateA(pho[2*(n-1)]));
         return new Matrix4d();
     }
 
