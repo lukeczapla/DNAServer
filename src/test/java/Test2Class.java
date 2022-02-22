@@ -1,5 +1,6 @@
 
 import edu.dnatools.calculate.Covariance;
+import edu.dnatools.utils.ForceField;
 import org.apache.tomcat.util.buf.ByteBufferUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -31,6 +32,18 @@ import org.nd4j.linalg.util.ArrayUtil;
 public class Test2Class {
 
     private static NDArrayStrings ns = new NDArrayStrings(5);
+
+    @Test
+    public void makeWilmaStrings() {
+        String text = ForceField.tetramers;
+        String[] steps = text.split(" ");
+        System.out.print("[");
+        for (int i = 0; i < steps.length; i++) {
+            System.out.print('"' + steps[i] + '"');
+            if (i != steps.length-1) System.out.print(",");
+        }
+        System.out.print("]");
+    }
 
     @Test
     public void mpowtest() {

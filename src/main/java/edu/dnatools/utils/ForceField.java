@@ -34,8 +34,8 @@ import java.util.*;
 public class ForceField {
 
     Logger log = LoggerFactory.getLogger(ForceField.class);
-    private String WCsteps = "CG CA TA AG GG AA GA AT AC GC";
-    private String tetramers = "AAAA AAAC AAAG AAAT CAAA CAAC CAAG CAAT GAAA GAAC GAAG GAAT TAAA TAAC TAAG TAAT AACA AACC AACG AACT CACA CACC CACG CACT GACA GACC GACG GACT TACA TACC TACG TACT AAGA AAGC AAGG AAGT CAGA CAGC CAGG CAGT GAGA GAGC GAGG GAGT TAGA TAGC TAGG TAGT AATA AATC AATG AATT CATA CATG GATA GATC GATG TATA ACAA ACAC ACAG ACAT CCAA CCAC CCAG CCAT GCAA GCAC GCAG GCAT TCAA TCAC TCAG TCAT ACGA ACGC ACGG ACGT CCGA CCGG GCGA GCGC GCGG TCGA AGAA AGAC AGAG AGAT CGAA CGAC CGAG CGAT GGAA GGAC GGAG GGAT TGAA TGAC TGAG TGAT AGCA AGCC AGCG AGCT CGCA CGCG GGCA GGCC GGCG TGCA AGGA AGGC AGGG AGGT CGGA CGGC CGGG CGGT GGGA GGGC GGGG GGGT TGGA TGGC TGGG TGGT ATAA ATAC ATAG ATAT CTAA CTAG GTAA GTAC GTAG TTAA";
+    public static String WCsteps = "CG CA TA AG GG AA GA AT AC GC";
+    public static String tetramers = "AAAA AAAC AAAG AAAT CAAA CAAC CAAG CAAT GAAA GAAC GAAG GAAT TAAA TAAC TAAG TAAT AACA AACC AACG AACT CACA CACC CACG CACT GACA GACC GACG GACT TACA TACC TACG TACT AAGA AAGC AAGG AAGT CAGA CAGC CAGG CAGT GAGA GAGC GAGG GAGT TAGA TAGC TAGG TAGT AATA AATC AATG AATT CATA CATG GATA GATC GATG TATA ACAA ACAC ACAG ACAT CCAA CCAC CCAG CCAT GCAA GCAC GCAG GCAT TCAA TCAC TCAG TCAT ACGA ACGC ACGG ACGT CCGA CCGG GCGA GCGC GCGG TCGA AGAA AGAC AGAG AGAT CGAA CGAC CGAG CGAT GGAA GGAC GGAG GGAT TGAA TGAC TGAG TGAT AGCA AGCC AGCG AGCT CGCA CGCG GGCA GGCC GGCG TGCA AGGA AGGC AGGG AGGT CGGA CGGC CGGG CGGT GGGA GGGC GGGG GGGT TGGA TGGC TGGG TGGT ATAA ATAC ATAG ATAT CTAA CTAG GTAA GTAC GTAG TTAA";
     //private final List<String> tetramerList = Arrays.asList(tetramers.split(" "));
 
     private final Map<String, List<INDArray>> data = new HashMap<>();
@@ -203,12 +203,12 @@ public class ForceField {
                             if (!data.containsKey(step)) {
                                 data.put(step, new Vector<>());
                             }
-                            List<INDArray> stepdata = data.get(step);
-                            stepdata.add(parameters);
-                            StepData ds = new StepData(parameters);
-                            nmap.put(ds, info);
-                            cmap.put(ds, ctxt);
-                            if (!ctx.contains(".")) {
+                            if (!ctxt.contains(".")) {
+                                List<INDArray> stepdata = data.get(step);
+                                stepdata.add(parameters);
+                                StepData ds = new StepData(parameters);
+                                nmap.put(ds, info);
+                                cmap.put(ds, ctxt);
                                 if (tetramerSet.contains(ctx)) {
                                     if (!tetramerdata.containsKey(ctx)) {
                                         tetramerdata.put(ctx, new Vector<>());
@@ -217,6 +217,7 @@ public class ForceField {
                                     stepdata.add(parameters);
                                 } else {
                                     ctx = complementContext(ctx);
+                                    ctxt = complementContext(ctxt);
                                     if (!tetramerdata.containsKey(ctx)) {
                                         tetramerdata.put(ctx, new Vector<>());
                                     }
@@ -237,18 +238,21 @@ public class ForceField {
                             }
                             List<INDArray> stepdata = data.get(step);
                             ctx = complementContext(ctx);
-                            for (int v = 0; v < 30; v++)
-                                parameters.getColumn(v).assign(pC[v]);
-                            stepdata.add(parameters);
-                            StepData ds = new StepData(parameters);
-                            nmap.put(ds, info);
-                            cmap.put(ds, ctxt);
-                            if (!ctx.contains(".")) {
-                                if (!tetramerdata.containsKey(ctx)) {
-                                    tetramerdata.put(ctx, new Vector<>());
-                                }
-                                stepdata = tetramerdata.get(ctx);
+                            ctxt = complementContext(ctxt);
+                            if (!ctxt.contains(".")) {
+                                for (int v = 0; v < 30; v++)
+                                    parameters.getColumn(v).assign(pC[v]);
                                 stepdata.add(parameters);
+                                StepData ds = new StepData(parameters);
+                                nmap.put(ds, info);
+                                cmap.put(ds, ctxt);
+                                if (!ctxt.contains(".")) {
+                                    if (!tetramerdata.containsKey(ctx)) {
+                                        tetramerdata.put(ctx, new Vector<>());
+                                    }
+                                    stepdata = tetramerdata.get(ctx);
+                                    stepdata.add(parameters);
+                                }
                             }
                         }
                         counter++;
@@ -523,11 +527,9 @@ public class ForceField {
             int nelements = 0;
 
             sb2.append(key).append("\n");
-            jm.append(key).append("\n");
             for (int i = 0; i < culledArray.rows(); i++) {
                 sb2.append(ns.format(culledArray.getRow(i)));
                 StepData st = new StepData(culledArray.getRow(i));
-                jm.append(ns.format(st.ic30())).append("\n");
                 StructuralData sd = nmap.get(st);
                 if (sd != null) {
                     sb2.append(" ").append(sd.pdbId).append(" ").append(cmap.get(st));

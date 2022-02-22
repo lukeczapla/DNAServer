@@ -245,6 +245,68 @@ public class TestClass {
     }
 
     @Test
+    public void writeMaddocks2() {
+        Nd4j.setDataType(DataBuffer.Type.DOUBLE);
+        try {
+            Scanner scan = new Scanner(new FileInputStream("ordering2.txt"));
+            List<String> tetramers = new ArrayList<>();
+            Map<String, INDArray> tetramerMeans = new LinkedHashMap<>();
+            Map<String, INDArray> tetramerCov = new LinkedHashMap<>();
+            for (int i = 0; i < 10; i++) {
+                String tetramer = scan.nextLine();
+                tetramers.add(tetramer);
+                tetramerMeans.put(tetramer, Nd4j.create(1, 30));
+                tetramerCov.put(tetramer, Nd4j.create(30, 30));
+            }
+            Gson gson = new Gson();
+            System.out.println(gson.toJson(tetramers));
+            scan = new Scanner(new FileInputStream("jmdimers.txt"));
+            for (int i = 0; i < 10; i++) {
+                String tetramer = scan.next();
+                boolean reverse = false;
+                if (!tetramers.contains(tetramer)) {
+                    tetramer = BasePairParameters.complement(tetramer, false);
+                    reverse = true;
+                }
+                int steps = Integer.parseInt(scan.next());
+                System.out.println(tetramer + " " + steps);
+                INDArray dataset = Nd4j.create(steps, 30);
+                scan.nextLine();
+                for (int j = 0; j < steps; j++) {
+                    String array = scan.nextLine();
+                    double[] step = gson.fromJson(array, double[].class);
+                    if (reverse) step = BasePairParameters.reversePacking(step);
+                    for (int k = 0; k < 30; k++) dataset.getRow(j).getColumn(k).assign(step[k]);
+                }
+                scan.nextLine(); // blank line!
+                PCA myPCA = new PCA(dataset);
+                tetramerMeans.put(tetramer, myPCA.getMean());
+                tetramerCov.put(tetramer, myPCA.getCovarianceMatrix());
+            }
+            PrintWriter out = new PrintWriter(new FileOutputStream("means_dimer.txt"));
+            PrintWriter out2 = new PrintWriter(new FileOutputStream("covariances_dimer.txt"));
+            for (String tetramer : tetramers) {
+                INDArray mean = tetramerMeans.get(tetramer);
+                out.print(tetramer);
+                for (int i = 0; i < 30; i++) out.printf(" %6.4f", mean.getDouble(i));
+                out.println();
+                INDArray cov = tetramerCov.get(tetramer);
+                for (int i = 0; i < 30; i++) {
+                    out2.print(tetramer);
+                    for (int j = 0; j < 30; j++) {
+                        out2.printf(" %6.4f", cov.getRow(i).getDouble(j));
+                    }
+                    out2.println();
+                }
+            }
+            out.close();
+            out2.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
     public void testMB() {
         PDBFileReader reader = new PDBFileReader();
         Structure s;
