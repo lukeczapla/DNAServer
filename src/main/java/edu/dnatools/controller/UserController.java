@@ -24,9 +24,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 
 import javax.servlet.http.HttpSession;
 import java.security.Principal;
@@ -34,6 +38,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.net.URI;
 
 /**
  * Created by luke on 6/5/16.
@@ -49,6 +54,7 @@ public class UserController {
     private final UserService userService;
     private final GoogleProperties googleProperties;
 
+    @Autowired
     public UserController(UserDetailsService userDetailsService, UserService userService, GoogleProperties googleProperties) {
         this.userDetailsService = userDetailsService;
         this.userService = userService;
@@ -73,26 +79,30 @@ public class UserController {
 
     @ApiOperation(value = "Authenticate the provided user", notes = "User information obtained from Google")
     @RequestMapping(value = "/conf/user", method = RequestMethod.POST)
-    @JsonView(JsonViews.User.class)
-    public ResponseEntity<String> login(@RequestBody User user) throws Exception {
-        if (user == null || user.getEmail() == null) {
+    public ResponseEntity<String> login(@RequestParam(name="credential") String credential) throws Exception {
+        /*if (user == null || user.getEmail() == null) {
             return new ResponseEntity<>("Invalid data", HttpStatus.BAD_REQUEST);
-        }
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), jacksonFactory)
+        }*/
+	String email = null;
+	GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), jacksonFactory)
                 .setAudience(Collections.singletonList(googleProperties.getClientId()))
                 .build();
-        log.info("Login Controller: " + user.getEmail() + " " + user.getTokenId().substring(0,5));
-        GoogleIdToken idToken = verifier.verify(user.getTokenId());
+        //log.info("Login Controller: " + user.getEmail() + " " + user.getTokenId().substring(0,5));
+        GoogleIdToken idToken = verifier.verify(credential);  // previously user.getTokenId()
 
         if (idToken == null) {
             return new ResponseEntity<>("Invalid token data", HttpStatus.BAD_REQUEST);
         } else {
             Payload payload = idToken.getPayload();
-            if (payload == null || !payload.getEmail().equals(user.getEmail())) {
+            if (payload == null || payload.getEmail() == null) {
                 return new ResponseEntity<>("Invalid email address", HttpStatus.BAD_REQUEST);
             }
+            email = payload.getEmail();
+            log.info("Email is " + email);
             log.info("Verified account");
         }
+        
+        User user = userService.getByEmail(email);
 
         if (userDetailsService.loadUserByUsername(user.getEmail()) != null) {
 
@@ -100,8 +110,11 @@ public class UserController {
                     userDetailsService.loadUserByUsername(user.getEmail()).getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authrequest);
 
-            return new ResponseEntity<>("Finished, authenticated", HttpStatus.OK);
-
+            //return new ResponseEntity<>("Finished, authenticated", HttpStatus.OK);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setLocation(URI.create("https://curationsystem.org/nucleic"));
+            return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
+            
         } else {
 
             try {
@@ -115,7 +128,10 @@ public class UserController {
             grant.add(new SimpleGrantedAuthority(user.getRole().toString()));
             UsernamePasswordAuthenticationToken authrequest = new UsernamePasswordAuthenticationToken(user.getEmail(), null, grant);
             SecurityContextHolder.getContext().setAuthentication(authrequest);
-            return new ResponseEntity<>("Created, authenticated", HttpStatus.OK);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setLocation(URI.create("https://curationsystem.org/nucleic"));
+            return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
+            //return new ResponseEntity<>("Created, authenticated", HttpStatus.OK);
 
         }
         //return new ResponseEntity("Invalid data", HttpStatus.BAD_REQUEST);
@@ -130,7 +146,7 @@ public class UserController {
 
 
     @RequestMapping(value = "/conf/user/test", method = RequestMethod.GET)
-    public ResponseEntity<String> test(Authentication authentication) {
+    public ResponseEntity<String> test() {
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
             log.info(SecurityContextHolder.getContext().getAuthentication().getPrincipal().toString());
         }

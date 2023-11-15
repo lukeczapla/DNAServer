@@ -31,5 +31,10 @@ public class UserServiceImpl extends AbstractService<User, Long> implements User
         newUser.setId(id);
         return getDao().saveAndFlush(newUser);
     }
+    
+    @Override
+    public User getByEmail(String email) {
+    	return userRepository.findByEmail(email);
+    }
 
 }

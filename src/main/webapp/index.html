@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="stylesheets/stylesheet.css">
     <link rel="shortcut icon" type="image/x-icon" href="dna.ico">
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js" async defer></script>
-    <script src="//apis.google.com/js/platform.js"></script>
+    <!-- <script src="//apis.google.com/js/platform.js"></script>-->
+    <script src="//accounts.google.com/gsi/client" async defer></script>
     <script src="js/3Dmol.min.js"></script>
     <script src="js/xml2json.min.js"></script>
     <script src="js/Chart.bundle.min.js"></script>
@@ -31,7 +32,13 @@
 
 <header>
     <div id="unauthed">
-        <div class="g-signin2" data-onsuccess="onSignIn" data-theme="light"></div>
+        <!--<div class="g-signin2" data-onsuccess="onSignIn" data-theme="light"></div>-->
+        <div id="g_id_onload"
+         data-client_id="613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com"
+         data-auto_prompt="false" 
+         data-login_uri="https://curationsystem.org/nucleic/conf/user">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>-
     </div>
     <div id="authed" hidden>
         <div id="imgbox"></div><a href="#" onclick="signout()">Sign out</a>

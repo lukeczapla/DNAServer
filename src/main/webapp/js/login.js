@@ -5,8 +5,9 @@ function isLoggedIn() {
     return loggedIn;
 }
 
-function onSignIn(googleUser) {
-
+function onSignIn(googleUser, googleUser2) {
+    console.log(googleUser);
+    console.log(googleUser2);
     let profile = googleUser.getBasicProfile();
     google = googleUser;
 
@@ -28,7 +29,7 @@ function onSignIn(googleUser) {
                 "Content-Type": "application/json"
             },
             method: 'POST',
-            url: '/conf/user',
+            url: endpoint+'/conf/user',
             data: JSON.stringify(user)
         }).done(function(data) {
             console.log(data);
@@ -43,7 +44,7 @@ function onSignIn(googleUser) {
 
 function registered() {
     $.ajax({method: "GET",
-            url: "/conf/user"}).done(function(result) {
+            url: endpoint+"/conf/user"}).done(function(result) {
          if (result.authenticated) {
               $('#unauthed').hide();
               $('#authed').show();
@@ -62,13 +63,13 @@ function registered() {
 function signout() {
      $.ajax({
          method: 'GET',
-         url: "/conf/user/logout",
+         url: endpoint+"/conf/user/logout",
          success: function(data) {
              console.log("logged out");
-             if (google != null) google.disconnect();
              $('#authed').hide();
              $('#unauthed').show();
              loggedIn = false;
+             location.reload();
          }
      });
 }
