@@ -1,11 +1,13 @@
 
-
 var boundaryConditions = {};
 var stepparameters = new Array(19);
 var forceconstants = new Array(19);
 var steps = ["CG", "CA", "TA", "AG", "GG", "AA", "GA", "AT", "AC", "GC", "ZZ", "ZA", "ZT", "ZG", "ZC",
     "AZ", "TZ", "GZ", "CZ"];
 var useRNA = false;
+
+var dimerstepparameters;
+var dimerforceconstants;
 
 let invalidChars = /[^AaTtGgCcZz]/gi;
 
@@ -14,86 +16,99 @@ let nproteins = 0;
 let loadedList = false;
 
 window.onload = function () {
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (settings.url.indexOf('/nucleic') != 0 && settings.url.indexOf('http') != 0)
+                settings.url = '/nucleic' + settings.url;
+        }
+    });
 
-for (let n = 0; n < 19; n++) {
-stepparameters[n] = new Array(6);
-stepparameters[n][0] = 0.0;
-stepparameters[n][1] = 0.0;
-stepparameters[n][2] = 34.286;
-stepparameters[n][3] = 0.0;
-stepparameters[n][4] = 0.0;
-stepparameters[n][5] = 3.4;
+    google.accounts.id.initialize({
+        client_id: "613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com",
+        callback: onSignIn
+    });
+    google.accounts.id.renderButton(
+        this.document.getElementById("gButtonDiv"),
+        { theme: "outline", size: "medium", text: "sign_in_with"}    
+    );
+    console.log("Starting up");
+    readGrounds();
 
-forceconstants[n] = new Array(6);
-forceconstants[n][0] = [0.0427, 0.0, 0.0, 0.0, 0.0, 0.0];
-forceconstants[n][1] = [0.0, 0.0427, 0.0, 0.0, 0.0, 0.0];
-forceconstants[n][2] = [0.0, 0.0, 0.0597, 0.0, 0.0, 0.0];
-forceconstants[n][3] = [0.0, 0.0, 0.0, 50.0, 0.0, 0.0];
-forceconstants[n][4] = [0.0, 0.0, 0.0, 0.0, 50.0, 0.0];
-forceconstants[n][5] = [0.0, 0.0, 0.0, 0.0, 0.0, 50.0];
+    for (let n = 0; n < 19; n++) {
+    stepparameters[n] = new Array(6);
+    stepparameters[n][0] = 0.0;
+    stepparameters[n][1] = 0.0;
+    stepparameters[n][2] = 34.286;
+    stepparameters[n][3] = 0.0;
+    stepparameters[n][4] = 0.0;
+    stepparameters[n][5] = 3.4;
 
+    forceconstants[n] = new Array(6);
+    forceconstants[n][0] = [0.0427, 0.0, 0.0, 0.0, 0.0, 0.0];
+    forceconstants[n][1] = [0.0, 0.0427, 0.0, 0.0, 0.0, 0.0];
+    forceconstants[n][2] = [0.0, 0.0, 0.0597, 0.0, 0.0, 0.0];
+    forceconstants[n][3] = [0.0, 0.0, 0.0, 50.0, 0.0, 0.0];
+    forceconstants[n][4] = [0.0, 0.0, 0.0, 0.0, 50.0, 0.0];
+    forceconstants[n][5] = [0.0, 0.0, 0.0, 0.0, 0.0, 50.0];
+
+    }
+
+    for (let n = 0; n < 136; n++) {
+        tetramerstepparameters[n] = new Array(6);
+        tetramerstepparameters[n][0] = 0.0;
+        tetramerstepparameters[n][1] = 0.0;
+        tetramerstepparameters[n][2] = 34.286;
+        tetramerstepparameters[n][3] = 0.0;
+        tetramerstepparameters[n][4] = 0.0;
+        tetramerstepparameters[n][5] = 3.4;
+
+        tetramerforceconstants[n] = new Array(6);
+        tetramerforceconstants[n][0] = [0.0427, 0.0, 0.0, 0.0, 0.0, 0.0];
+        tetramerforceconstants[n][1] = [0.0, 0.0427, 0.0, 0.0, 0.0, 0.0];
+        tetramerforceconstants[n][2] = [0.0, 0.0, 0.0597, 0.0, 0.0, 0.0];
+        tetramerforceconstants[n][3] = [0.0, 0.0, 0.0, 50.0, 0.0, 0.0];
+        tetramerforceconstants[n][4] = [0.0, 0.0, 0.0, 0.0, 50.0, 0.0];
+        tetramerforceconstants[n][5] = [0.0, 0.0, 0.0, 0.0, 0.0, 50.0];
+    }
+
+    $("#tp0").val(0.0);
+    $("#tp1").val(0.0);
+    $("#tp2").val(34.286);
+    $("#tp3").val(0.0);
+    $("#tp4").val(0.0);
+    $("#tp5").val(3.4);
+
+    $("#M00").val(0.0427);
+    $("#M01").val(0.0);
+    $("#M02").val(0.0);
+    $("#M03").val(0.0);
+    $("#M04").val(0.0);
+    $("#M05").val(0.0);
+
+    $("#M11").val(0.0427);
+    $("#M12").val(0.0);
+    $("#M13").val(0.0);
+    $("#M14").val(0.0);
+    $("#M15").val(0.0);
+
+    $("#M22").val(0.0597);
+    $("#M23").val(0.0);
+    $("#M24").val(0.0);
+    $("#M25").val(0.0);
+
+    $("#M33").val(50.0);
+    $("#M34").val(0.0);
+    $("#M35").val(0.0);
+
+    $("#M44").val(50.0);
+    $("#M45").val(0.0);
+
+    $("#M55").val(50.0);
+
+    registered();
+    console.log("Set step parameters and force constants");
 }
 
-for (let n = 0; n < 136; n++) {
-    tetramerstepparameters[n] = new Array(6);
-    tetramerstepparameters[n][0] = 0.0;
-    tetramerstepparameters[n][1] = 0.0;
-    tetramerstepparameters[n][2] = 34.286;
-    tetramerstepparameters[n][3] = 0.0;
-    tetramerstepparameters[n][4] = 0.0;
-    tetramerstepparameters[n][5] = 3.4;
-
-    tetramerforceconstants[n] = new Array(6);
-    tetramerforceconstants[n][0] = [0.0427, 0.0, 0.0, 0.0, 0.0, 0.0];
-    tetramerforceconstants[n][1] = [0.0, 0.0427, 0.0, 0.0, 0.0, 0.0];
-    tetramerforceconstants[n][2] = [0.0, 0.0, 0.0597, 0.0, 0.0, 0.0];
-    tetramerforceconstants[n][3] = [0.0, 0.0, 0.0, 50.0, 0.0, 0.0];
-    tetramerforceconstants[n][4] = [0.0, 0.0, 0.0, 0.0, 50.0, 0.0];
-    tetramerforceconstants[n][5] = [0.0, 0.0, 0.0, 0.0, 0.0, 50.0];
-}
-
-$("#tp0").val(0.0);
-$("#tp1").val(0.0);
-$("#tp2").val(34.286);
-$("#tp3").val(0.0);
-$("#tp4").val(0.0);
-$("#tp5").val(3.4);
-
-$("#M00").val(0.0427);
-$("#M01").val(0.0);
-$("#M02").val(0.0);
-$("#M03").val(0.0);
-$("#M04").val(0.0);
-$("#M05").val(0.0);
-
-$("#M11").val(0.0427);
-$("#M12").val(0.0);
-$("#M13").val(0.0);
-$("#M14").val(0.0);
-$("#M15").val(0.0);
-
-$("#M22").val(0.0597);
-$("#M23").val(0.0);
-$("#M24").val(0.0);
-$("#M25").val(0.0);
-
-$("#M33").val(50.0);
-$("#M34").val(0.0);
-$("#M35").val(0.0);
-
-$("#M44").val(50.0);
-$("#M45").val(0.0);
-
-$("#M55").val(50.0);
-
-registered();
-
-}
-
-
-function tetramerOn() {
-    alert("Not yet implemented for simulations, sorry!");
-}
 
 function RNAmode() {
     $("#bpselect option").each(function() {
@@ -166,6 +181,56 @@ function isListLoaded() {
     return loadedList;
 }
 
+function tetramerOn() {
+    usetetramer = true;
+    dimerstepparameters = stepparameters;
+    dimerforceconstants = forceconstants;
+    stepparameters = tetramerstepparameters;
+    forceconstants = tetramerforceconstants;
+    $("#bpselect option").remove()
+    for (let i = 0; i < forceconstants.length; i++) {
+        $("#bpselect").append($("<option>", {"value": i, text: tetramerSteps[i] + " step"}));
+    }
+    step = 0;
+
+      for (let i = 0; i < 6; i++) {
+         $("#tp"+i).val(stepparameters[step][i].toFixed(5));
+       }
+
+       for (let i = 0; i < 6; i++)
+          for (let j = i; j < 6; j++) {
+             $("#M"+i+j).val(forceconstants[step][i][j].toFixed(5));
+          }
+    usetetramer = true;
+        $("#teton").hide();
+        $("#tetoff").show();
+
+}
+
+
+function tetramerOff() {
+    tetramerstepparameters = stepparameters;
+    tetramerforceconstants = forceconstants;
+    stepparameters = dimerstepparameters;
+    forceconstants = dimerforceconstants;
+    $("#bpselect option").remove()
+    for (let i = 0; i < forceconstants.length; i++) {
+        $("#bpselect").append($("<option>", {"value": i, text: steps[i] + " step"}));
+    }
+    step = 0;
+      for (let i = 0; i < 6; i++) {
+         $("#tp"+i).val(stepparameters[step][i].toFixed(5));
+       }
+
+       for (let i = 0; i < 6; i++)
+          for (let j = i; j < 6; j++) {
+             $("#M"+i+j).val(forceconstants[step][i][j].toFixed(5));
+          }
+        usetetramer = false;
+        $("#teton").show();
+        $("#tetoff").hide();
+}
+
 function loadFile() {
 
     let input = document.getElementById('fileinput');
@@ -183,6 +248,15 @@ function loadFile() {
       console.log(loadedData);
       forceconstants = loadedData.forceconstants;
       stepparameters = loadedData.stepparameters;
+      if (forceconstants.length == 136) {
+        $("#bpselect option").remove()
+        for (let i = 0; i < forceconstants.length; i++) {
+            $("#bpselect").append($("<option>", {"value": i, text: tetramerSteps[i] + " step"}));
+            step = 0;
+        }
+        usetetramer = true;
+        setupTetramers();
+      }
       for (let i = 0; i < 6; i++) {
          $("#tp"+i).val(stepparameters[step][i].toFixed(5));
        }
@@ -228,7 +302,15 @@ function saveFile() {
 
 
 function saveAndLoad() {
-
+    if (stepparameters == null || stepparameters.length == 0) {
+        stepparameters = [0,0,34.28,0,0,3.4];
+    }
+    if (forceconstants == null || forceconstants.length == 0) {
+        forceconstants = [[],[],[],[],[],[]];
+        for (let i = 0; i < 6; i++) {
+            forceconstants[i] = [0,0,0,0,0,0];
+        }
+    }
     for (let i = 0; i < 6; i++) {
         stepparameters[step][i] = parseFloat($("#tp"+i).val());
         $("#tp"+i).val(stepparameters[$("#bpselect").val()][i].toFixed(5));
@@ -245,6 +327,7 @@ function saveAndLoad() {
 }
 
 function saveSelectedStep() {
+
     for (let i = 0; i < 6; i++) {
         stepparameters[step][i] = parseFloat($("#tp"+i).val());
     }
@@ -346,7 +429,7 @@ function deleteJobs() {
             let conBox = confirm("Are you sure you want to delete: " + $(this).html());
             if (conBox) {
                 $.ajax({url: "/delete/" + $(this).val(),
-                    method: "GET"})
+                    method: "DELETE"})
                 $(this).remove();
             }
         }
@@ -434,7 +517,7 @@ function submitJob() {
             'Content-Type': 'application/json'
         },
         url: "/submit",
-        method: "POST",
+        method: "PUT",
         data: JSON.stringify(jobdata)
     };
     $.ajax(req).done(function(response) {
@@ -469,7 +552,7 @@ function addProtein() {
                      'Content-Type': 'application/json'
                  },
                  url: "/addprotein",
-                 method: "POST",
+                 method: "PUT",
                  data: JSON.stringify(proteinData)
                };
 
@@ -505,6 +588,17 @@ function randomBase() {
     case 3: return 'C';
   }
 }
+
+function bnum(x) {
+    switch (x) {
+        case 'A': return 0;
+        case 'C': return 1;
+        case 'G': return 2;
+        case 'T': return 3;
+        case 'U': return 3;
+    }
+}
+
 
 function generateRandom() {
   if ($("#nsd").val() < 1) return;

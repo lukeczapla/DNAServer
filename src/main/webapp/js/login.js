@@ -1,15 +1,53 @@
+
 let loggedIn = false;
-var google;
+//var google;
 
 function isLoggedIn() {
     return loggedIn;
 }
+function parseJwt(token) {
+    let base64Url = token.split('.')[1];
+    let base64 = base64Url.replace(/-/g, "+").replace("/_/g", "/");
+    let jsonPayload = decodeURIComponent(atob(base64).split("").map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+}
 
-function onSignIn(googleUser, googleUser2) {
-    console.log(googleUser);
-    console.log(googleUser2);
+function onSignIn(response) {
+
+    let userInfo = parseJwt(response.credential);
+    let googleUser = {
+        getBasicProfile: function() {
+            return {
+                getId: function() {
+                    return userInfo.sub;
+                },
+                getName: function() {
+                    return userInfo.name;
+                },
+                getGivenName: function() {
+                    return userInfo.given_name;
+                },
+                getFamilyName: function() {
+                    return userInfo.family_name;
+                },
+                getImageUrl: function() {
+                    return userInfo.picture;
+                },
+                getEmail: function() {
+                    return userInfo.email;
+                }
+            };
+        },
+        getAuthResponse: function() {
+            return {
+                id_token: response.credential
+            };
+        }
+    };
     let profile = googleUser.getBasicProfile();
-    google = googleUser;
+    let google = googleUser;
 
     let user = {"email": profile.getEmail(),
         "firstName": profile.getGivenName(),
@@ -29,7 +67,7 @@ function onSignIn(googleUser, googleUser2) {
                 "Content-Type": "application/json"
             },
             method: 'POST',
-            url: endpoint+'/conf/user',
+            url: '/conf/user',
             data: JSON.stringify(user)
         }).done(function(data) {
             console.log(data);
@@ -44,7 +82,7 @@ function onSignIn(googleUser, googleUser2) {
 
 function registered() {
     $.ajax({method: "GET",
-            url: endpoint+"/conf/user"}).done(function(result) {
+            url: "/conf/user"}).done(function(result) {
          if (result.authenticated) {
               $('#unauthed').hide();
               $('#authed').show();
@@ -62,14 +100,14 @@ function registered() {
 
 function signout() {
      $.ajax({
-         method: 'GET',
-         url: endpoint+"/conf/user/logout",
+         method: 'DELETE',
+         url: "/conf/user",
          success: function(data) {
              console.log("logged out");
+             if (google != null) google.accounts.id.disableAutoSelect();
              $('#authed').hide();
              $('#unauthed').show();
              loggedIn = false;
-             location.reload();
          }
      });
 }

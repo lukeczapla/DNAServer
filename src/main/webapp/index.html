@@ -8,9 +8,8 @@
     <link rel="stylesheet" href="stylesheets/stylesheet.css">
     <link rel="shortcut icon" type="image/x-icon" href="dna.ico">
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js" async defer></script>
-    <!-- <script src="//apis.google.com/js/platform.js"></script>-->
-    <script src="//accounts.google.com/gsi/client" async defer></script>
-    <script src="js/3Dmol.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://3dmol.org/build/3Dmol-min.js"></script>
     <script src="js/xml2json.min.js"></script>
     <script src="js/Chart.bundle.min.js"></script>
     <script src="js/plotly-latest.min.js"></script>
@@ -21,7 +20,7 @@
     <script src="js/fixed.js"></script>
     <script src="js/analysis.js"></script>
     <script src="js/structures.js"></script>
-    <script src="js/references.js"></script>
+    <script src="js/references.js" defer></script>
     <script src="js/scoring.js"></script>
     <script src="js/proteins.js"></script>
     <script src="js/simulation.js"></script>
@@ -29,16 +28,9 @@
     <script src="js/tetramer.js"></script>
 </head>
 <body>
-
 <header>
     <div id="unauthed">
-        <!--<div class="g-signin2" data-onsuccess="onSignIn" data-theme="light"></div>-->
-        <div id="g_id_onload"
-         data-client_id="613395107842-nmr1dthih3c5ibcfcsrrkq61ef838ks8.apps.googleusercontent.com"
-         data-auto_prompt="false" 
-         data-login_uri="https://curationsystem.org/nucleic/conf/user">
-        </div>
-        <div class="g_id_signin" data-type="standard"></div>-
+        <div id="gButtonDiv"></div>
     </div>
     <div id="authed" hidden>
         <div id="imgbox"></div><a href="#" onclick="signout()">Sign out</a>
@@ -81,6 +73,9 @@
     <input class="dmenu" id="tab10" type="radio" name="tabs">
     <label for="tab10">RCSB Force Field Analysis</label>
 
+    <input class="dmenu" id="tab11" type="radio" name="tabs">
+    <label for="tab11">Drawing Atomistic 30-Vectors</label>
+
     <section id="content1">
         <select onchange="saveAndLoad()" id="bpselect" name="steps">
             <option value=0>CG step</option>
@@ -105,8 +100,8 @@
         </select>
         <input type="button" id="rnaon" onclick="RNAmode();" value="Turn on RNA mode">
         <input type="button" id="rnaoff" onclick="RNAmodeOff();" value="Turn off RNA mode" hidden>
-        <input type="button" id="rnaon" onclick="tetramerOn();" value="Turn on tetramer mode">
-        <input type="button" id="rnaoff" onclick="tetramerOff();" value="Turn off tetramer mode" hidden>
+        <input type="button" id="teton" onclick="tetramerOn();" value="Turn on tetramer mode">
+        <input type="button" id="tetoff" onclick="tetramerOff();" value="Turn off tetramer mode" hidden>
 
         <p/>
         <h4>Equilibrium Step States</h4>
@@ -325,7 +320,7 @@
         <table id="fixedProteinTable">
             <tr>
                 <td>Select protein: </td>
-                <td><select id="fixed0"></td>
+                <td><select id="fixed0"/></td>
                 <td>placed at (position of first bp, starting with 1): <input id="fixedpos0" type="number"></td>
             </tr>
         </table>
@@ -652,9 +647,48 @@
         <select id="dimerList"></select> <input type="button" value="Plot data" onclick="plotStepGraph2()">
         <div id="scatterplotdiv"></div>
     </section>
+    <section id="content11">
+        <input type="number" value=0.00 id="vs1"/>
+        <input type="number" value=0.00 id="vs2"/>
+        <input type="number" value=0.00 id="vs3"/>
+        <input type="number" value=0.00 id="vs4"/>
+        <input type="number" value=0.00 id="vs5"/>
+        <input type="number" value=0.00 id="vs6"/>
+        <input type="number" value=0.00 id="vs7"/>
+        <input type="number" value=0.00 id="vs8"/>
+        <input type="number" value=0.00 id="vs9"/>
+        <input type="number" value=0.00 id="vs10"/>
+        <input type="number" value=9.50 id="vs11"/>
+        <input type="number" value=0.00 id="vs12"/>
+        <input type="number" value=0.00 id="vs13"/>
+        <input type="number" value=0.00 id="vs14"/>
+        <input type="number" value=3.00 id="vs15"/>
+        <input type="number" value=0.00 id="vs16"/>
+        <input type="number" value=0.00 id="vs17"/>
+        <input type="number" value=3.40 id="vs18"/>
+        <input type="number" value=0.00 id="vs19"/>
+        <input type="number" value=0.00 id="vs20"/>
+        <input type="number" value=0.00 id="vs21"/>
+        <input type="number" value=0.00 id="vs22"/>
+        <input type="number" value=9.50 id="vs23"/>
+        <input type="number" value=0.00 id="vs24"/>
+        <input type="number" value=0.00 id="vs25"/>
+        <input type="number" value=0.00 id="vs26"/>
+        <input type="number" value=0.00 id="vs27"/>
+        <input type="number" value=0.00 id="vs28"/>
+        <input type="number" value=0.00 id="vs29"/>
+        <input type="number" value=0.00 id="vs30"/>
+        <br>
+        <input type="text" value="AA" id="vsseq"/>
+        <input type="button" onclick="drawHelix()" value="Draw Helical Region">
+        X-ray means: <select id="tetramergrounds" onclick="drawGroundState()" onchange="drawGroundState()"></select>
+        MD means <select id="tetramergrounds2" onclick="drawGroundState2()" onchange="drawGroundState2()"></select>
+        <div id="glmolbox3" class="mol-container"></div>
+
+    </section>
 </main>
 <footer>
-    Dr. Luke Czapla - The Frisch School with Wilma K. Olson Laboratory at Rutgers University
+    Dr. Luke Czapla - Wilma K. Olson Laboratory at Rutgers University
 </footer>
 </body>
 </html>
