@@ -608,3 +608,4 @@ function generateRandom() {
   }
   $("#sequence").val(s);
 }
+

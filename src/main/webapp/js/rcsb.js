@@ -14,7 +14,7 @@ let queryProteinDNA = {
                     "operator": "exact_match",
                     "value": "X-RAY DIFFRACTION"
                 }
-            },
+              },
                 {
                     "type": "terminal",
                     "service": "text",
@@ -52,7 +52,16 @@ let queryProteinDNA = {
                     "operator": "greater",
                     "value": 0
                 }
-            }]
+            },
+	    {
+               "type": "terminal",
+	       "service": "text",
+	       "parameters": {
+                 "attribute": "rcsb_entry_info.resolution_combined",
+		 "operator": "less_or_equal",
+		 "value": 3.0
+	       }
+	    }]
     },
     "request_options": {
         "return_all_hits": true,
@@ -279,7 +288,7 @@ let queryRNAonly = {
 
 function testAll() {
     let request = queryProteinDNA;
-    $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v1/query',
+    $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v2/query',
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -292,7 +301,7 @@ function testAll() {
 
 function testNMR() {
     let request = queryProteinDNANMR;
-    $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v1/query',
+    $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v2/query',
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -328,14 +337,14 @@ function submitFF() {
      let opt = $("#structureType").val();
      console.log(opt);
      switch (parseInt(opt)) {
-        case 1: request = queryProteinDNAXray; break;   //queryProteinDNA; break;
+        case 1: request = queryProteinDNA; break;   //queryProteinDNA; break;
         case 2: request = queryDNAonly; break;
         case 3: request = queryProteinRNA; break;
         case 4: request = queryRNAonly; break;
         default: request = queryProteinDNA; break;
      }
      //let request = "<orgPdbQuery><queryType>org.pdb.query.simple.ChainTypeQuery</queryType><description>Luke Czapla for Wilma Olson lab</description><containsProtein>Y</containsProtein><containsDna>Y</containsDna><containsRna>N</containsRna></orgPdbQuery>";
-     $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v1/query',
+     $.ajax({url: 'https://search.rcsb.org/rcsbsearch/v2/query',
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'

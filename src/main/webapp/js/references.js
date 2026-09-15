@@ -1,6 +1,9 @@
 var refs, steppars;
 let listAll = {};
 let prepped = false;
+let Qhalf = numeric.identity(4);
+let grounds = [];
+let grounds2 = [];
 //pdbData({})
 //getFrames
 
@@ -126,7 +129,7 @@ function addBC() {
             'Content-Type': 'application/json'
         },
         url: "/addbc",
-        method: "POST",
+        method: "PUT",
         data: JSON.stringify(bcdata),
         success: function(result) {
             if (result == "OK") {
@@ -239,8 +242,8 @@ function translateProtein(ref, delNA) {
 
       //console.log(ref);
       let inverse = numeric.inv(ref);
-      let config = {};
-      let element = $('#glmolbox2');
+      let config = {backgroundColor: 'white'};
+      let element = document.querySelector('#glmolbox2');
       let viewer = $3Dmol.createViewer(element, config);
       let simmodel = viewer.addModel($("#pdbref").val(), "pdb");
       let frames = simmodel.getFrames();
@@ -276,7 +279,7 @@ function translateProtein(ref, delNA) {
 function buildStructure(sequence, A, visview) {
     if (!prepped) {
     if (useRNA == false) ['A','T','G','C'].forEach(function(element) {
-        $.ajax({url: "pdb/d"+element+".pdb", async:false}).done(function(result) {
+        $.ajax({url: "/nucleic/pdb/d"+element+".pdb", async:false}).done(function(result) {
            let lines = result.split('\n');
            let chainA = [], chainB = [];
            for (let i = 0; i < lines.length; i++) {
@@ -291,7 +294,7 @@ function buildStructure(sequence, A, visview) {
         });
     });
     else ['A','U','G','C'].forEach(function(element) {
-                 $.ajax({url: "pdb/"+element+".pdb", async:false}).done(function(result) {
+                 $.ajax({url: "/nucleic/pdb/"+element+".pdb", async:false}).done(function(result) {
                     let lines = result.split('\n');
                     let chainA = [], chainB = [];
                     for (let i = 0; i < lines.length; i++) {
@@ -474,13 +477,13 @@ function jeigen(a) {
   let v = [];
   //let v = a.slice();
   for (i = 0; i < a.length; i++) {
-    v1 = []; v2 = [];
+    let vt1 = []; vt2 = [];
     for (j = 0; j < a.length; j++) {
-      if (i == j) v1.push(1.0); else v1.push(0.0);
-      v2.push(a[i][j]);
+      if (i == j) vt1.push(1.0); else vt1.push(0.0);
+      vt2.push(a[i][j]);
     }
-    x.push(v2);
-    v.push(v1);
+    x.push(vt2);
+    v.push(vt1);
   }
   //let x = numeric.eye(a.length);
 
@@ -577,5 +580,369 @@ function jeigen(a) {
 
   console.log("could not solve eigenvectors of matrix in 500 iterations");
   return null;
+
+}
+
+
+function calculateQhalf(fra) {
+    let uscale = 5.0;
+    let trace = fra[0][0]+fra[1][1]+fra[2][2];
+    let q = [[fra[0][3]], [fra[1][3]], [fra[2][3]]];
+    let a = [[fra[2][1]-fra[1][2]], [fra[0][2]-fra[2][0]], [fra[1][0]-fra[0][1]]];
+    let u = numeric.mul(a, uscale*(2.0/(trace+1.0)));
+    u = numeric.mul(u, 0.5/uscale);
+    let v1 = numeric.dot(numeric.transpose(u), u)[0];
+    let uhalf = numeric.mul(u, uscale*2.0/(1.0+Math.sqrt(1.0+v1)));
+    u = numeric.mul(uhalf, 0.5/uscale);
+    let uvec = numeric.identity(3);
+    uvec[0][0] = 0.0;  uvec[1][1] = 0.0; uvec[2][2] = 0.0;
+    uvec[0][1] = -u[0][2]; uvec[0][2] = u[0][1]; uvec[1][2] = -u[0][0];
+    uvec = numeric.sub(uvec, numeric.transpose(uvec));
+
+    v1 = numeric.dot(numeric.transpose(u), u)[0];
+    let upuu = numeric.add(uvec, numeric.dot(uvec, uvec));
+
+    return numeric.add(numeric.identity(3), numeric.mul(upuu, 2.0/(1.0+v1)));
+}
+
+
+function calculateFrame(ic, isphosphate = false) {
+  let uscale = 5.0;
+  let u = [[ic[0], ic[1], ic[2]]];
+  let v = [[ic[3], ic[4], ic[5]]];
+  // scale the coordinates
+  u = numeric.mul(u, 0.5/uscale);
+  // calculate skew-symmetric matrix related to u
+  let uvec = numeric.identity(3); uvec[0][0] = 0.0;  uvec[1][1] = 0.0; uvec[2][2] = 0.0;
+  uvec[0][1] = -u[0][2]; uvec[0][2] = u[0][1]; uvec[1][2] = -u[0][0];
+  uvec = numeric.sub(uvec, numeric.transpose(uvec));
+
+//  console.log(uvec);
+
+  let v1 = numeric.dot(u, numeric.transpose(u))[0][0];
+
+  let upuu = numeric.add(uvec, numeric.dot(uvec, uvec));
+
+  upuu = numeric.mul(upuu, 2.0/(1.0 + v1));
+  // calculate the rotation matrix that goes with u
+  let Q = numeric.add(numeric.identity(3), upuu);
+
+  // assign it as the 3x3 result portion of 4x4 SE(3) matrix
+  let result = numeric.identity(4);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) result[i][j] = Q[i][j];
+
+  let uhalf = numeric.mul(u, uscale*(2.0/(1.0+Math.sqrt(1.0 + parseFloat(numeric.dot(u, numeric.transpose(u))[0])))));
+  u = numeric.mul(uhalf, 0.5/uscale);
+
+  uvec = numeric.identity(3);
+  uvec[0][0] = 0.0;  uvec[1][1] = 0.0; uvec[2][2] = 0.0;
+  uvec[0][1] = -u[0][2]; uvec[0][2] = u[0][1]; uvec[1][2] = -u[0][0];
+  uvec = numeric.sub(uvec, numeric.transpose(uvec));
+
+//  console.log(numeric.dot(u, numeric.transpose(u)));
+  v1 = numeric.dot(u, numeric.transpose(u))[0][0];
+  upuu = numeric.mul(upuu, 2.0/(1.0 + v1));
+
+  Qhalf = numeric.add(numeric.identity(3), upuu);
+
+  if (isphosphate) {
+    let p__rot = [[0.28880532, -0.40811277, -0.8659639, 0.0],
+                           [-0.50008344, 0.70707284, -0.50010651, 0.0],
+                           [0.81639941, 0.57748763, 0.0, 0.0],
+                           [0.0, 0.0, 0.0, 1.0]];
+    result = numeric.dot(result, numeric.inv(p__rot));
+    result[0][3] = v[0][0];
+    result[1][3] = v[0][1];
+    result[2][3] = v[0][2];
+//    console.log(ic);
+//    console.log(result);
+    return result;
+  }
+
+  let q = numeric.dot(Qhalf, numeric.transpose(v));
+ // console.log(q[0][0]);
+  result[0][3] = q[0][0];
+  result[1][3] = q[1][0];
+  result[2][3] = q[2][0];
+
+  return result;
+
+
+}
+
+
+
+function calculateFrameMID(ic, isphosphate = false) {
+  let uscale = 5.0;
+  let u = [[ic[0], ic[1], ic[2]]];
+  let v = [[ic[3], ic[4], ic[5]]];
+  // scale the coordinates
+  u = numeric.mul(u, 0.5/uscale);
+  // calculate skew-symmetric matrix related to u
+  let uvec = numeric.identity(3); uvec[0][0] = 0.0;  uvec[1][1] = 0.0; uvec[2][2] = 0.0;
+  uvec[0][1] = -u[0][2]; uvec[0][2] = u[0][1]; uvec[1][2] = -u[0][0];
+  uvec = numeric.sub(uvec, numeric.transpose(uvec));
+
+  let v1 = numeric.dot(u, numeric.transpose(u))[0][0];
+  console.log(v1);
+
+  let upuu = numeric.add(uvec, numeric.dot(uvec, uvec));
+  // calculate the rotation matrix that goes with u
+  let Q = numeric.add(numeric.identity(3), numeric.mul(2.0/(1.0+v1), upuu));
+  console.log("Q");
+  console.log(Q);
+
+  // assign it as the 3x3 result portion of 4x4 SE(3) matrix
+  let result = numeric.identity(4);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) result[i][j] = Q[i][j];
+
+  let uhalf = numeric.mul(u, uscale*(2.0/(1.0+Math.sqrt(1.0 + parseFloat(numeric.dot(u, numeric.transpose(u))[0])))));
+  u = numeric.mul(uhalf, 0.5/uscale);
+
+  uvec = numeric.identity(3);
+  uvec[0][0] = 0.0;  uvec[1][1] = 0.0; uvec[2][2] = 0.0;
+  uvec[0][1] = -u[0][2]; uvec[0][2] = u[0][1]; uvec[1][2] = -u[0][0];
+  uvec = numeric.sub(uvec, numeric.transpose(uvec));
+
+//  console.log(numeric.dot(u, numeric.transpose(u)));
+  v1 = numeric.dot(u, numeric.transpose(u))[0][0];
+  Qhalf = numeric.add(numeric.identity(3), numeric.mul(upuu, 2.0/(1.0+v1)));
+
+  if (isphosphate) {
+    let p__rot = [[0.28880532, -0.40811277, -0.8659639, 0.0],
+                           [-0.50008344, 0.70707284, -0.50010651, 0.0],
+                           [0.81639941, 0.57748763, 0.0, 0.0],
+                           [0.0, 0.0, 0.0, 1.0]];
+    result = numeric.dot(result, numeric.inv(p__rot));
+    result[0][3] = v[0][0];
+    result[1][3] = v[0][1];
+    result[2][3] = v[0][2];
+//    console.log(ic);
+//    console.log(result);
+    return result;
+  }
+
+  let q = numeric.dot(Qhalf, numeric.transpose(v));
+ // console.log(q[0][0]);
+  result[0][3] = q[0][0];
+  result[1][3] = q[1][0];
+  result[2][3] = q[2][0];
+
+  return result;
+
+
+}
+
+
+function drawHelix() {
+    get30PDB([$("#vs1").val(), $("#vs2").val(), $("#vs3").val(), $("#vs4").val(), $("#vs5").val(), $("#vs6").val(),
+              $("#vs7").val(), $("#vs8").val(), $("#vs9").val(), $("#vs10").val(), $("#vs11").val(), $("#vs12").val(),
+              $("#vs13").val(), $("#vs14").val(), $("#vs15").val(), $("#vs16").val(), $("#vs17").val(), $("#vs18").val(),
+              $("#vs19").val(), $("#vs20").val(), $("#vs21").val(), $("#vs22").val(), $("#vs23").val(), $("#vs24").val(),
+              $("#vs25").val(), $("#vs26").val(), $("#vs27").val(), $("#vs28").val(), $("#vs29").val(), $("#vs30").val()],
+              $("#vsseq").val());
+}
+
+
+function get30PDB(ic, step, Ai) {
+
+//    if (Ai === undefined)
+//      let A = numeric.identity(4);
+//    else
+//      let A = Ai;
+    let A = numeric.identity(4);
+    let bfra = calculateFrame(ic.slice(0, 6));
+    bfra[0][3] = bfra[0][3] / 2.0;
+    bfra[1][3] = bfra[1][3] / 2.0;
+    bfra[2][3] = bfra[2][3] / 2.0;
+
+//console.log(calculateQhalf(calculateFrame(ic.slice(0,6))));
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      bfra[i][j] = Qhalf[i][j];
+    }
+
+    let watson = numeric.dot(A, bfra)
+
+ //   bfra = calculateFrame(ic.slice(0, 6));
+//    bfra[0][3] = bfra[0][3] / 2.0;
+//    bfra[1][3] = bfra[1][3] / 2.0;
+//    bfra[2][3] = bfra[2][3] / 2.0;
+    let crick = numeric.dot(A, numeric.inv(bfra));
+
+    crick[0][1] *= -1; crick[1][1] *= -1; crick[2][1] *= -1; crick[0][2] *= -1; crick[1][2] *= -1; crick[2][2] *= -1;
+    let phoC = numeric.dot(crick, calculateFrame(ic.slice(6, 12), true));
+
+    A = numeric.dot(A, calculateFrameMID(ic.slice(12, 18)));
+    console.log(ic.slice(12, 18));
+    console.log(calculateFrame(ic.slice(12, 18)));
+
+    bfra = calculateFrame(ic.slice(24, 30));
+    bfra[0][3] = bfra[0][3] / 2.0;
+    bfra[1][3] = bfra[1][3] / 2.0;
+    bfra[2][3] = bfra[2][3] / 2.0;
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      bfra[i][j] = Qhalf[i][j];
+    }
+    let watson2 = numeric.dot(A, bfra);
+
+//    bfra = calculateFrame(ic.slice(24, 30));
+//    bfra[0][3] = bfra[0][3] / 2.0;
+//    bfra[1][3] = bfra[1][3] / 2.0;
+//    bfra[2][3] = bfra[2][3] / 2.0;
+
+    let crick2 = numeric.dot(A, numeric.inv(bfra));
+
+//    watson2[0][1] *= -1; watson2[1][1] *= -1; watson2[2][1] *= -1; watson2[0][2] *= -1; watson2[1][2] *= -1; watson2[2][2] *= -1;
+    let phoW = numeric.dot(watson2, calculateFrame(ic.slice(18, 24), true));
+
+// watson2[0][1] *= -1; watson2[1][1] *= -1; watson2[2][1] *= -1; watson2[0][2] *= -1; watson2[1][2] *= -1; watson2[2][2] *= -1;
+        crick2[0][1] *= -1; crick2[1][1] *= -1; crick2[2][1] *= -1; crick2[0][2] *= -1; crick2[1][2] *= -1; crick2[2][2] *= -1;
+
+
+//    console.log(watson);
+//    console.log(crick);
+//    console.log(A);
+//    console.log(watson2);
+//    console.log(crick2);
+//    console.log(phoC);
+//    console.log(phoW);
+
+    let strW1 = step[0];
+    let strW2 = step[1];
+
+    let strC1 = complement(step[0], false);
+    let strC2 = complement(step[1], false);
+
+    let W1 = [];
+    let W2 = [];
+    let C1 = [];
+    let C2 = [];
+    let P1 = [];
+    let P2 = [];
+
+    console.log(strW1+strC1+ " " + strW2 + strC2);
+
+    let pdb = "";
+
+    $.ajax({url: "/pdb/" + strW1 +"b.pdb", async:false}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < lines.length; i++) W1.push(lines[i]);
+    });
+    $.ajax({url: "/pdb/" + strW2 +"b.pdb", async:false}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < lines.length; i++) W2.push(lines[i]);
+    });
+    $.ajax({url: "/pdb/" + strC1 +"b.pdb", async:false}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < lines.length; i++) C1.push(lines[i]);
+    });
+    $.ajax({url: "/pdb/" + strC2 +"b.pdb", async:false}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < lines.length; i++) C2.push(lines[i]);
+    });
+    $.ajax({url: "/pdb/pho.pdb", async:false}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < lines.length; i++) {
+            P1.push(lines[i]);
+            P2.push(lines[i]);
+       }
+    });
+
+    let current = 1;
+    let atomN = 1;
+    [W1, C1, W2, C2, P1, P2].forEach(function(element) {
+        let ref = [];
+        if (current == 1) ref = watson;
+        if (current == 2) ref = crick;
+        if (current == 3) ref = watson2;
+        if (current == 4) ref = crick2;
+        if (current == 5) ref = phoC;
+        if (current == 6) ref = phoW;
+        for (let i = 0; i < element.length-1; i++) {
+            let text = element[i];
+            let numv=atomN+"";
+            let numsize = numv.length;
+            for (let k = 0; k < 6-numsize; k++) numv = " "+numv;
+            let numr=current+"";
+            numsize = numr.length;
+            for (let k = 0; k < 4-numsize; k++) numr = " "+numr;
+            let val = [0,0,0,1];
+            val[0] = parseFloat(text.slice(30, 38));
+            val[1] = parseFloat(text.slice(38, 46));
+            val[2] = parseFloat(text.slice(46, 54));
+            //console.log(JSON.stringify(val));
+            let newxyz = new Array(3);
+            newxyz[0] = ref[0][3]+ref[0][0]*val[0]+ref[0][1]*val[1]+ref[0][2]*val[2];
+            newxyz[1] = ref[1][3]+ref[1][0]*val[0]+ref[1][1]*val[1]+ref[1][2]*val[2];
+            newxyz[2] = ref[2][3]+ref[2][0]*val[0]+ref[2][1]*val[1]+ref[2][2]*val[2];
+            //console.log(newxyz);
+            let num = new Array(3);
+            num[0] = newxyz[0].toFixed(2);
+            num[1] = newxyz[1].toFixed(2);
+            num[2] = newxyz[2].toFixed(2);
+            for (let k = 0; k < 3; k++) {
+              let lena = num[k].length;
+              for (let l = 0; l < 8-lena; l++)
+                num[k] = " " + num[k];
+              if (num[k].length > 8) num[k] = num[k].slice(0,8);
+            }
+            text = text.slice(0, 5) + numv + text.slice(11);
+            text = text.slice(0, 22) + numr + text.slice(26);
+            text = text.slice(0, 30) + num[0] + text.slice(38);
+            text = text.slice(0, 38) + num[1] + text.slice(46);
+            text = text.slice(0, 46) + num[2] + text.slice(54);
+            pdb = pdb + text +"\n";
+            atomN++
+        }
+        current++;
+    });
+
+    console.log(pdb);
+
+    draw3(pdb);
+
+}
+
+function readGrounds() {
+
+    $.ajax({url: "/t.txt"}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < 136; i++) {
+         grounds.push(JSON.parse(lines[i]));
+         console.log(tetramerSteps[i] + " " + grounds[i]);
+         $("#tetramergrounds").append("<option value="+i+" onchange=\"drawGroundState("+i+")\">"+tetramerSteps[i]+"</option>");
+       }
+    });
+    $.ajax({url: "/t2.txt"}).done(function(result) {
+       let lines = result.split('\n');
+       for (let i = 0; i < 136; i++) {
+         grounds2.push(JSON.parse(lines[i]));
+         console.log(tetramerSteps[i] + " " + grounds2[i]);
+         $("#tetramergrounds2").append("<option value="+i+" onchange=\"drawGroundState2("+i+")\">"+tetramerSteps[i]+"</option>");
+       }
+    });
+}
+
+function drawGroundState(q) {
+
+    let i = 0;
+    if (q === undefined) i = $("#tetramergrounds").val();
+    else i = q;
+    let mv = grounds[i];
+    get30PDB([mv[0], mv[1], mv[2], mv[3], mv[4], mv[5], mv[6], mv[7], mv[8], mv[9], mv[10], mv[11], mv[12], mv[13], mv[14],
+    mv[15], mv[16], mv[17], mv[18], mv[19], mv[20], mv[21], mv[22], mv[23], mv[24], mv[25], mv[26], mv[27], mv[28], mv[28]],
+    tetramerSteps[i][1]+tetramerSteps[i][2]);
+
+}
+
+function drawGroundState2(q) {
+
+    let i = 0;
+    if (q === undefined) i = $("#tetramergrounds2").val();
+    else i = q;
+    let mv = grounds2[i];
+    get30PDB([mv[0], mv[1], mv[2], mv[3], mv[4], mv[5], mv[6], mv[7], mv[8], mv[9], mv[10], mv[11], mv[12], mv[13], mv[14],
+    mv[15], mv[16], mv[17], mv[18], mv[19], mv[20], mv[21], mv[22], mv[23], mv[24], mv[25], mv[26], mv[27], mv[28], mv[28]],
+    tetramerSteps[i][1]+tetramerSteps[i][2]);
 
 }
